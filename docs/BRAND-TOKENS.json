@@ -1,0 +1,49 @@
+{
+  "revision": 8,
+  "figmaSynced": false,
+  "source": "css/motion.css",
+  "themes": {
+    "light": {
+      "page": "#f7f8fc",
+      "surface": "#ffffff",
+      "soft": "#eef1f7",
+      "text": "#1c2b50",
+      "muted": "#65718a",
+      "navy": "#1c2d59",
+      "accent": "#a6113c",
+      "border": "#dce2ed",
+      "button-text": "#ffffff"
+    },
+    "dark": {
+      "page": "#111b32",
+      "surface": "#192641",
+      "soft": "#202f4b",
+      "text": "#f3f5fc",
+      "muted": "#b1bfd9",
+      "navy": "#e3e9fa",
+      "accent": "#f0a3bd",
+      "border": "#34425e",
+      "button-text": "#192847"
+    },
+    "blue": {
+      "page": "#f0f4fc",
+      "surface": "#fbfcff",
+      "soft": "#e5edfa",
+      "text": "#1b3159",
+      "muted": "#5b6f91",
+      "navy": "#203e76",
+      "accent": "#a6113c",
+      "border": "#d1def1",
+      "button-text": "#ffffff"
+    }
+  },
+  "layout": {
+    "buttonHeight": 50,
+    "buttonRadius": 14,
+    "iconTarget": 44,
+    "pagePadding": 22,
+    "buttonGroupGap": 12,
+    "filterGap": 8,
+    "timeSlotHeight": 44
+  }
+}

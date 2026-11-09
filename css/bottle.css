@@ -1,0 +1,61 @@
+/* SAI soft-ball dispenser. The geometry conveys crowding; names remain readable. */
+.bottle-webgl{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
+.has-webgl>.bottle-glass,.has-webgl>.bottle-inscription,.has-webgl>.gacha-wordmark{visibility:hidden}
+.has-webgl .ball-skin,.has-webgl .ball-label{opacity:0}
+.has-webgl .bottle-tags{clip-path:none!important;z-index:3}
+.has-webgl .member-ball:focus-visible{outline:2px solid var(--accent);outline-offset:-7px;border-radius:50%}
+.has-webgl .bottle-empty{z-index:2;top:37%}
+.occupancy-test{margin:0 0 20px;border:1px solid var(--border);border-radius:16px;background:var(--surface,#fff);overflow:hidden}
+.occupancy-test summary{display:flex;align-items:center;gap:8px;min-height:48px;padding:0 16px;font-size:12px;font-weight:600;cursor:pointer;list-style:none}
+.occupancy-test summary::-webkit-details-marker{display:none}
+.occupancy-test summary:after{content:'+';margin-left:auto;color:var(--muted);font-size:17px;font-weight:400}
+.occupancy-test[open] summary:after{content:'−'}
+.test-caption{font-size:10px;font-weight:400;color:var(--muted)}
+.test-body{padding:0 16px 8px}
+.test-stepper{display:flex;align-items:center;justify-content:center;gap:28px;margin:0 0 8px}
+.test-stepper button{width:44px;height:44px;border-radius:50%;border:1px solid var(--border);background:var(--page);color:var(--text);font-size:23px;font-weight:300;cursor:pointer}
+.test-stepper button:disabled{opacity:.35;cursor:default}
+.test-stepper output{font-size:27px;font-weight:600;letter-spacing:-1px;min-width:61px;text-align:center;font-variant-numeric:tabular-nums;color:var(--text)}
+.test-stepper small{font-size:12px;margin-left:5px;letter-spacing:0;color:var(--muted);font-weight:400}
+.test-body input[type=range]{width:100%;height:28px;margin:0;accent-color:var(--accent);cursor:pointer}
+.test-presets{display:flex;gap:3px;margin:2px 0 8px}.test-presets button{flex:1;min-width:0;height:36px;border:0;border-radius:8px;background:transparent;color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums;cursor:pointer}.test-presets button[aria-pressed=true]{background:var(--navy,#1c2d59);color:var(--button-text,#fff)}
+.test-bottom{border-top:1px solid var(--border);display:flex;align-items:center;gap:9px;padding-top:5px}
+.test-bottom button{min-height:40px;border:0;background:none;color:var(--text);font-size:11px;white-space:nowrap;cursor:pointer;padding:0 3px}.test-bottom [data-demo-play]{color:var(--accent);font-weight:600;margin-right:auto}.test-bottom label{font-size:10px;color:var(--muted)}.test-bottom input[type=range]{width:72px;accent-color:var(--text)}
+.member-bottle.liquid-vessel{width:100%;max-width:360px;aspect-ratio:auto;margin:0 auto;contain:layout style;isolation:isolate;touch-action:pan-y}
+.bottle-scene{position:relative;aspect-ratio:360/400;width:100%;max-width:292px;margin:0 auto;isolation:isolate;--light-shift:0px}
+.bottle-glass{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}.bottle-back{z-index:0;filter:drop-shadow(0 8px 9px #21345a0a)}.bottle-front{z-index:4}.bottle-ground{filter:blur(5px)}
+.bottle-reflection{opacity:.52;animation:glass-light 9s ease-in-out infinite;transform:translateX(var(--light-shift));transition:transform .6s ease}@keyframes glass-light{0%,100%{opacity:.42}50%{opacity:.72}}
+.bottle-inscription{position:absolute;z-index:1;top:22%;left:0;right:0;text-align:center;font:700 18px -apple-system,sans-serif;letter-spacing:7px;color:#62779a20;pointer-events:none}
+.bottle-tags{position:absolute;inset:0;z-index:2}.gacha-exits{position:absolute;inset:0;z-index:3;pointer-events:none}
+.member-ball{position:absolute;transform:translate(-50%,-50%);margin:0;padding:0;border:0;background:none!important;box-shadow:none!important;border-radius:0;display:grid;place-items:center;cursor:pointer;outline-offset:-4px;color:#24385c;--ball-font:11px;--ball-light:#f6f8fe;--ball-mid:#ced9ee;--ball-shade:#a7b9d9;--ball-stroke:#8197b94d}
+.ball-skin{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}.ball-light{stop-color:var(--ball-light)}.ball-mid{stop-color:var(--ball-mid)}.ball-shade{stop-color:var(--ball-shade)}.ball-surface{stroke:var(--ball-stroke)}.ball-seam{stroke:#fff;opacity:.55}
+.member-ball .ball-label{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;flex-direction:column;max-width:79%;font-size:var(--ball-font);font-weight:700;letter-spacing:-.5px;line-height:1.4;transform:rotate(var(--label-tilt,0deg));pointer-events:none}
+.ball-label>span{width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}.ball-label small{font-size:8px;font-weight:400;letter-spacing:0;opacity:.8;line-height:1.3}
+.ball-tone-self{color:#fff;--ball-light:#60779e;--ball-mid:#304970;--ball-shade:#1c2d59;--ball-stroke:#10234680}.ball-tone-self .ball-seam{opacity:.25}
+.ball-tone-1{color:#7c2545;--ball-light:#fff1f5;--ball-mid:#ebc7d5;--ball-shade:#cb93ac;--ball-stroke:#a4607e4d}
+.ball-tone-2{color:#fff;--ball-light:#c76383;--ball-mid:#aa345b;--ball-shade:#841032;--ball-stroke:#71123250}.ball-tone-2 .ball-seam{opacity:.23}
+.ball-tone-3{color:#3b4b66;--ball-light:#fff;--ball-mid:#e8edf5;--ball-shade:#c6d0e1;--ball-stroke:#8b9ab248}
+.member-ball.tag-pending,.member-ball.tag-private{color:#65718a;--ball-light:#f6f7fb;--ball-mid:#e0e6f0;--ball-shade:#c6d0e0;--ball-stroke:#acbad044}
+.member-ball.tag-overflow{color:#fff;--ball-light:#657d9e;--ball-mid:#364f73;--ball-shade:#1c2d59}
+.member-ball:hover .ball-skin{filter:brightness(1.05)}.member-ball:focus-visible .ball-surface{stroke:var(--accent);stroke-width:4}.member-ball:focus-visible{outline:none}
+.ball-departing{pointer-events:none;cursor:default;opacity:1!important}.ball-departing:disabled{opacity:1}.gacha-gate{transform-origin:180px 329px;transition:transform .2s}.is-dispensing .gacha-gate{transform:translateY(-4px) scaleY(.5)}
+.gacha-wordmark{position:absolute;z-index:5;left:22%;top:82.1%;font:600 6px -apple-system,sans-serif;letter-spacing:1.5px;color:#b7c5df;pointer-events:none}
+.bottle-empty{position:absolute;z-index:1;inset:39% 0 auto;text-align:center;color:var(--muted);pointer-events:none}.bottle-empty[hidden]{display:none}.bottle-empty>span{display:inline-block;width:18px;height:2px;background:var(--border);border-radius:2px}.bottle-empty p{font-size:12px;font-weight:400;margin:12px 0}
+.bottle-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 6px;padding:3px 0 0}.bottle-summary>div{display:flex;align-items:baseline;gap:7px}.bottle-summary .vessel-value{font-size:30px;font-weight:600;letter-spacing:-1.3px;line-height:1.3;color:var(--text)}.bottle-summary>div>span{font-size:13px;color:var(--muted)}
+.member-bottle .vessel-touch{position:static;inset:auto;display:flex;flex-direction:row;gap:3px;min-height:44px;padding:10px 0 10px 12px;font-size:12px;font-weight:500;color:var(--text);border:0;border-radius:8px;transform:none;cursor:pointer}.member-bottle .vessel-touch svg{width:14px;height:14px}.member-bottle .vessel-touch:focus-visible{outline-offset:3px}
+.bottle-roster-note{font-size:10px;color:var(--muted);margin:0 6px;min-height:17px;line-height:17px}.bottle-roster-note:empty{display:none}.member-bottle .change-badge{top:4%;right:10%;z-index:5;box-shadow:0 3px 10px #a6113c20}
+.home-view .member-bottle{max-width:360px;margin:0 auto}.home-view .room-intro{margin-bottom:0}.home-view .presence-meta{border-top:1px solid var(--border);margin:10px 0 18px;min-height:38px}.home-view .presence-meta>span,.home-view .refresh-button{font-size:11px}.home-view .refresh-button{min-height:38px}.home-view .free-window{min-height:76px;padding:15px 17px}.home-view .next-heading{margin-top:20px}
+.member-row.member-highlight{background:var(--blue-soft);border-radius:12px;padding-left:10px;padding-right:10px;border-color:transparent;box-shadow:inset 3px 0 var(--accent)}
+.member-bottle[data-material=frost] .bottle-body{fill:#e1e8f375;stroke:#b7c6de;stroke-width:3}.member-bottle[data-material=frost] .bottle-reflection{opacity:.25;animation:none}.member-bottle[data-material=ceramic] .bottle-body{fill:#f7eaf040;stroke:#ccb0bf;stroke-width:6}.member-bottle[data-material=ceramic] .gacha-front-base{fill:#8d3556}
+.member-bottle[data-connection=stale] .bottle-tags,.member-bottle[data-connection=offline] .bottle-tags{filter:saturate(.5)}.member-bottle[data-reduced=true] .bottle-reflection,.member-bottle[data-paused=true] .bottle-reflection{animation:none}
+body[data-theme=dark] .member-bottle:not(.mini-vessel) .bottle-body,.preview-card[data-theme=dark] .bottle-body{fill:#a8bade1c;stroke:#7d90b066}body[data-theme=dark] .member-bottle:not(.mini-vessel) .bottle-inscription,.preview-card[data-theme=dark] .bottle-inscription{color:#c4d1ea22}
+.custom-view .preview-orb{width:100%;height:100%;display:flex;align-items:center;justify-content:center}.custom-view .preview-card .member-bottle.mini-vessel{width:168px;height:187px;margin:0}.custom-view .preview-card{height:205px;min-height:205px}.mini-vessel .bottle-scene{width:100%;max-width:none}.mini-vessel .member-ball{pointer-events:none}.mini-vessel .ball-label{font-size:6px}.mini-vessel .ball-label small{font-size:4px}.mini-vessel .bottle-inscription{font-size:9px;letter-spacing:4px}.mini-vessel .gacha-wordmark{font-size:3px;letter-spacing:.6px}.mini-vessel .bottle-empty p{font-size:8px}.mini-vessel .bottle-empty>span{width:10px;height:1px}
+.settings-group .member-bottle{max-width:300px;margin:0 auto}.settings-group .member-bottle .vessel-value{font-size:30px}
+@media(max-width:360px){.bottle-scene{max-width:276px}.member-ball .ball-label{font-size:10px}.bottle-summary .vessel-value{font-size:28px}}
+@media(max-height:760px){.home-view .bottle-scene{max-width:260px}.home-view .member-bottle{max-width:360px}.home-view .member-ball .ball-label{font-size:10px}.home-view .presence-meta{margin-bottom:12px}.home-view .next-heading{margin-top:14px}.custom-view .preview-card{height:160px;min-height:160px}.custom-view .preview-card .member-bottle.mini-vessel{width:139px;height:154px}}
+/* Keep the object visible while using the phone-sized test controls. */
+.test-body{display:grid;grid-template-columns:140px minmax(0,1fr);column-gap:14px}
+.test-stepper{gap:4px;margin:0 0 4px}.test-stepper output{min-width:44px;font-size:23px}.test-stepper small{font-size:10px;margin-left:3px}
+.test-body>#home-demo-count{align-self:center}.test-presets,.test-bottom{grid-column:1/-1}.occupancy-test summary{min-height:40px}
+.home-view .bottle-scene{max-width:278px}.home-view .presence-meta{margin-bottom:12px}
+@media(max-height:760px){.home-view .bottle-scene{max-width:260px}}

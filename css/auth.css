@@ -1,0 +1,34 @@
+/* SAI entry: restrained type, white space and one primary action. */
+body:is([data-route=login],[data-route=signup],[data-route=pending]) .app-header,body:is([data-route=login],[data-route=signup],[data-route=pending]) .bottom-nav{display:none}
+body:is([data-route=login],[data-route=signup],[data-route=pending]) .app-shell{background:#fff}
+body:is([data-route=login],[data-route=signup],[data-route=pending]) .view{padding:0 28px;display:flex;flex-direction:column;scroll-padding:24px}
+.auth-view{width:100%;min-height:100%;padding:42px 0 24px;display:flex;flex-direction:column}
+.auth-brand{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700;letter-spacing:.7px;margin-bottom:72px;color:#1c2d59}
+.auth-brand img{width:34px;height:34px;object-fit:contain;mix-blend-mode:multiply}
+.auth-heading{margin-bottom:32px}.auth-heading p{margin:0 0 12px;font-size:11px;color:#69748a}.auth-heading h2{font-size:30px;letter-spacing:-1.2px;font-weight:700;line-height:1.3;margin:0 0 12px}.auth-heading>span{font-size:13px;color:#69748a;line-height:1.7}
+.auth-form{display:flex;flex-direction:column;gap:20px}.auth-field{display:flex;flex-direction:column;gap:9px}.auth-field>label{font-size:12px;font-weight:700}
+.auth-field input{width:100%;height:52px;border:1px solid #dce1e9;border-radius:10px;background:#fff;padding:0 14px;font-size:15px;color:#1c2d59;outline:none;transition:border-color .15s,box-shadow .15s}
+.auth-field input::placeholder{color:#8992a4;font-size:13px}.auth-field input:focus{border-color:#1c2d59;box-shadow:0 0 0 3px #1c2d590d}
+.auth-password{position:relative}.auth-password input{padding-right:60px}.auth-password button{position:absolute;right:4px;top:4px;height:44px;min-width:48px;background:transparent;border:0;border-radius:8px;font-size:11px;color:#69748a}
+.auth-error{font-size:12px;line-height:1.55;margin:-7px 0 0}.auth-error:empty{display:none}
+.auth-submit{margin-top:6px;width:100%;min-height:52px;justify-content:space-between;font-size:14px;border-radius:10px!important;background:#1c2d59!important;color:#fff!important;box-shadow:none!important}.auth-submit svg{width:17px;height:17px}
+.auth-switch{display:flex;justify-content:center;align-items:center;gap:9px;margin:18px 0 30px;font-size:12px;color:#69748a}.auth-switch button{min-height:44px;border:0;background:none;color:#a6113c;font-size:12px;font-weight:700;padding:0 5px}
+.auth-demo{border-top:1px solid #e7eaf0;padding-top:12px;margin-top:auto;font-size:11px;color:#69748a}.auth-demo summary{cursor:pointer;min-height:44px;display:flex;align-items:center;justify-content:space-between;list-style:none}.auth-demo summary:after{content:'+';font-size:18px}.auth-demo[open] summary:after{content:'−'}.auth-demo p{margin:0 0 12px;line-height:1.6}.auth-demo-options{display:flex;gap:8px}.auth-demo-options button{min-height:44px;flex:1;background:#f5f6f9;color:#1c2d59;border:1px solid #e7eaf0;border-radius:8px;font-size:12px}
+.auth-preview-note{font-size:11px;color:#69748a;line-height:1.65;margin:0 0 24px}.auth-footer{padding-top:32px;display:flex;align-items:center;gap:10px;color:#9299a7}.auth-footer>span:first-child{font-size:12px;font-weight:700;letter-spacing:.7px}.auth-footer>span:last-child{font-size:9px;letter-spacing:.2px}
+.auth-notice{font-size:12px;line-height:1.65;padding:14px;border-radius:8px;background:var(--soft);color:var(--text);margin:0 0 22px}.auth-notice .text-button{display:block;margin:5px 0 0;padding:0;min-height:32px;font-size:12px;color:var(--accent)}
+body[data-route=signup] .auth-brand{margin-bottom:36px}body[data-route=signup] .auth-form{gap:16px}body[data-route=signup] .auth-switch{margin-bottom:10px}
+.membership-view{display:flex;flex-direction:column;min-height:100%;padding:36px 0}.membership-logo{width:38px;height:38px;object-fit:contain;margin-bottom:90px}.membership-mark{width:60px;height:60px;border:1px solid var(--border);border-radius:50%;display:grid;place-items:center;color:var(--accent);margin-bottom:30px}.membership-mark svg{width:26px;height:26px}.membership-view h2{font-size:24px;letter-spacing:-.8px;line-height:1.5;margin:8px 0 14px}.membership-view>p:not(.eyebrow){font-size:13px;line-height:1.8;color:var(--muted);margin:0 0 30px}.membership-status{display:flex;justify-content:space-between;padding:20px 0;border-block:1px solid var(--border);font-size:13px;margin-bottom:34px}.membership-status strong{color:var(--accent)}.membership-view>.text-button{margin-top:10px;min-height:44px}
+@media(max-height:740px){.auth-view{padding-top:26px}.auth-brand{margin-bottom:38px}.auth-heading{margin-bottom:26px}.auth-form{gap:17px}.auth-footer{padding-top:22px}.membership-logo{margin-bottom:50px}}
+@media(max-width:360px){body:is([data-route=login],[data-route=signup]) .view{padding-inline:23px}.auth-heading h2{font-size:28px}}
+
+.auth-operator{border-block:1px solid #e7eaf0;color:#1c2d59}
+.auth-operator summary{display:flex;align-items:center;gap:8px;min-height:48px;list-style:none;cursor:pointer;font-size:12px;font-weight:700}
+.auth-operator summary::-webkit-details-marker{display:none}
+.auth-operator summary::after{content:'+';margin-left:auto;font-size:18px;font-weight:400;color:#69748a}
+.auth-operator[open] summary::after{content:'−'}
+.auth-operator summary:focus-visible{outline:2px solid #1c2d59;outline-offset:3px;border-radius:4px}
+.auth-optional{font-size:11px;font-weight:400;color:#69748a}
+.auth-operator>.auth-field{padding:0 0 16px}
+.auth-operator p{margin:0;font-size:11px;line-height:1.65;color:#69748a}
+.auth-operator .operator-demo-code{padding-top:4px;font-size:10px}
+.operator-demo-code code{margin-left:4px;font-size:11px;color:#1c2d59;white-space:nowrap}

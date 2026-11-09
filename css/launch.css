@@ -1,0 +1,23 @@
+/* The existing SAI emblem is the focal point, with its navy and burgundy accents. */
+body[data-route=loading] .app-header,body[data-route=loading] .bottom-nav{display:none}
+body[data-route=loading] .app-shell{background:#fff}
+body[data-route=loading] .view{padding:0 28px}
+.launch-screen{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 0 66px;background:#fff;color:#1c2d59;position:relative;text-align:center}
+.launch-mark{width:112px;height:112px;position:relative;margin-bottom:26px;animation:sai-arrive .55s cubic-bezier(.2,.7,.2,1) both}
+.launch-mark img{width:100%;height:100%;object-fit:contain;mix-blend-mode:multiply}
+.launch-wordmark{font-size:15px;letter-spacing:2.6px;font-weight:700}
+.launch-progress{display:block;width:56px;height:2px;margin-top:30px;background:#eceef3;overflow:hidden}
+.launch-progress:after{content:'';display:block;width:24px;height:100%;background:#a6113c;animation:sai-load 1.25s ease-in-out infinite}
+.launch-screen>p{font-size:11px;color:#758099;margin-top:14px;line-height:1.6}
+.launch-caption{position:absolute;bottom:34px;font-size:8px;letter-spacing:1.6px;color:#8b93a4}
+@keyframes sai-arrive{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes sai-load{0%{transform:translateX(-25px)}100%{transform:translateX(57px)}}
+@media(prefers-reduced-motion:reduce){.launch-mark,.launch-progress:after{animation:none}.launch-progress:after{width:100%}}
+.code-settings .auth-form{gap:20px}.code-settings .auth-field>p{font-size:12px;color:var(--muted);line-height:1.7;margin:0}
+.code-meta{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin:0 0 28px;padding:16px 0;border-block:1px solid var(--border);line-height:1.7;flex-wrap:wrap}
+.code-meta strong{font-size:12px;color:var(--text);font-weight:500}
+.code-success{margin:0 0 24px;padding:14px 16px;border-left:2px solid var(--accent);background:var(--soft);font-size:13px;line-height:1.7;color:var(--text)}
+.code-settings .auth-field input{background:var(--surface);color:var(--text);border-color:var(--border)}
+.check-in-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 0;border-bottom:1px solid var(--border)}
+.check-in-row strong{font-size:14px}.check-in-row p{margin:6px 0 0;font-size:11px;line-height:1.6;color:var(--muted)}
+.check-in-row button{min-width:104px;min-height:46px;flex-shrink:0;font-size:13px}

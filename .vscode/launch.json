@@ -2,10 +2,13 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "SAI 프론트엔드 실행",
-      "type": "msedge",
+      "name": "SAI 서버 실행",
+      "type": "debugpy",
       "request": "launch",
-      "file": "${workspaceFolder}/index.html"
+      "module": "uvicorn",
+      "args": ["main:app", "--app-dir", "sai-room-backend", "--host", "127.0.0.1", "--port", "5317"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
     }
   ]
 }

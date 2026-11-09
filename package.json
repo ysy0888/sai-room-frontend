@@ -1,0 +1,27 @@
+{
+  "name": "sai-room-frontend",
+  "version": "1.7.0",
+  "private": true,
+  "description": "SAI ROOM production frontend and authenticated FastAPI service",
+  "scripts": {
+    "dev": "node scripts/serve.mjs",
+    "build": "npm run build:scene && esbuild src/motion/index.ts --bundle --format=iife --global-name=SaiLiquid --target=es2020 --outfile=js/liquid.js",
+    "typecheck": "tsc --noEmit --target ES2020 --moduleResolution bundler --module ESNext --lib ES2020,DOM src/motion/index.ts",
+    "test": "node --test tests/*.test.*",
+    "build:scene": "esbuild src/scene/bottle-3d.js --bundle --format=iife --target=es2020 --minify --legal-comments=linked --outfile=js/bottle-3d.js",
+    "test:server": "python3 -m pytest -q sai-room-backend/tests",
+    "test:browser": "python3 tests/run-production.py"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12",
+    "playwright": "1.62.1",
+    "typescript": "5.9.3"
+  },
+  "type": "module",
+  "dependencies": {
+    "three": "0.180.0"
+  }
+}

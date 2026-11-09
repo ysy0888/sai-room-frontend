@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from database import get_connection
 
 router = APIRouter(prefix='/auth', tags=['회원가입·로그인'])
-ITERATIONS = 310000
+ITERATIONS = 600000
 SESSION_SECONDS = 7 * 24 * 3600
 
 

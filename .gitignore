@@ -1,0 +1,14 @@
+node_modules/
+artifacts/
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+*.db
+*.db-*
+*.sqlite*
+*.initial-operator-code
+.env
+.env.*
+!.env.example
+.DS_Store
