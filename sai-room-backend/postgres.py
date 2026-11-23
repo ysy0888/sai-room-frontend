@@ -8,6 +8,7 @@ import re
 import sqlite3
 from contextlib import contextmanager
 from threading import Lock
+from pathlib import Path
 
 import psycopg
 import certifi
@@ -41,7 +42,10 @@ def pool():
     global _pool
     with _lock:
         if _pool is None:
-            tls = {'sslmode':'verify-full', 'sslrootcert':certifi.where()} if os.environ.get('SAI_ENV') == 'production' else {}
+            root_cert = os.environ.get('SAI_DATABASE_SSL_ROOT_CERT')
+            if root_cert:
+                root_cert = str(Path(__file__).resolve().parent / root_cert)
+            tls = {'sslmode':'verify-full', 'sslrootcert':root_cert or certifi.where()} if os.environ.get('SAI_ENV') == 'production' else {}
             _pool = ConnectionPool(
                 os.environ['SAI_DATABASE_URL'], min_size=0, max_size=4,
                 timeout=15, max_idle=60, open=True,

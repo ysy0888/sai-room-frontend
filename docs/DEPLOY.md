@@ -19,6 +19,7 @@ Render 무료 서버는 약 15분간 접속이 없으면 잠들며, 다음 접�
 `render.yaml` Blueprint를 적용한다. 브랜치는 `feature/auth-frontend`, 요금은 Free, 디스크는 없음이다.
 
 - `SAI_DATABASE_URL`: 위 전용 역할의 PostgreSQL 연결 문자열. Render 비밀 환경 변수에만 저장한다.
+- `SAI_DATABASE_SSL_ROOT_CERT`: 백엔드 디렉터리 기준 CA 인증서 경로. Supabase Database Settings에서 받은 공개 루트 인증서 `certs/supabase-prod-ca-2021.crt`를 사용한다. 비밀 키가 아니며 저장소에 포함한다. 다른 데이터베이스 공급자를 사용하면 해당 공급자의 CA로 교체한다.
 - `SAI_ENV=production`: HTTPS 전용 세션과 호스트 검증을 켠다.
 - `RENDER_EXTERNAL_URL`: Render가 자동으로 주는 앱 주소를 사용한다.
 - `SAI_INITIAL_OPERATOR_CODE`: Render가 자동 생성한다. 최초 DB 초기화에만 사용하며 앱에서 변경한 코드를 덮어쓰지 않는다.

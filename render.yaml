@@ -16,5 +16,7 @@ services:
         value: production
       - key: SAI_DATABASE_URL
         sync: false
+      - key: SAI_DATABASE_SSL_ROOT_CERT
+        value: certs/supabase-prod-ca-2021.crt
       - key: SAI_INITIAL_OPERATOR_CODE
         generateValue: true
