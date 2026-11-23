@@ -46,3 +46,34 @@ def test_backup_is_readable_private_and_does_not_overwrite_daily_copy(tmp_path,m
         assert conn.execute('SELECT value FROM records').fetchall()==[('before',)]
     assert snapshot.stat().st_mode & 0o777 == 0o600
     assert not list(backups.glob('.sai-backup-*'))
+
+
+def test_vercel_entrypoint_trusts_only_configured_domains_and_requires_postgres():
+    code = '''
+import asyncio
+from fastapi.testclient import TestClient
+from app import app
+from security import PUBLIC_ORIGIN, TRUSTED_ORIGINS
+assert PUBLIC_ORIGIN == 'https://sai-production.vercel.app'
+assert TRUSTED_ORIGINS == {PUBLIC_ORIGIN, 'https://sai-deployment.vercel.app', 'https://sai-branch.vercel.app'}
+client = TestClient(app, base_url=PUBLIC_ORIGIN)
+assert client.get('/').status_code == 200
+assert client.get('/', headers={'host':'sai-deployment.vercel.app'}).status_code == 200
+assert client.get('/', headers={'host':'someone-else.vercel.app'}).status_code == 400
+assert client.post('/api/v1/auth/login',headers={'origin':'https://someone-else.vercel.app'},json={'email':'member@example.org','password':'isolated-test-pass'}).status_code == 403
+assert client.get('/sai-room-backend/security.py').status_code == 404
+assert client.get('/.env').status_code == 404
+async def check_startup():
+    try:
+        async with app.router.lifespan_context(app):
+            raise AssertionError('ephemeral SQLite accepted')
+    except RuntimeError as exc:
+        assert 'Vercel requires SAI_DATABASE_URL' in str(exc)
+asyncio.run(check_startup())
+'''
+    env = {**os.environ, 'PYTHONPATH':str(BACKEND.parent), 'SAI_ENV':'production',
+           'VERCEL':'1', 'VERCEL_PROJECT_PRODUCTION_URL':'sai-production.vercel.app',
+           'VERCEL_URL':'sai-deployment.vercel.app','VERCEL_BRANCH_URL':'sai-branch.vercel.app'}
+    for key in ('SAI_PUBLIC_ORIGIN','SAI_DATABASE_URL','RENDER_EXTERNAL_URL'):
+        env.pop(key,None)
+    subprocess.run([sys.executable,'-c',code],env=env,check=True,capture_output=True,text=True)
