@@ -12,6 +12,9 @@ Render 무료 서버는 약 15분간 접속이 없으면 잠들며, 다음 접�
 2. 관리자 연결로 `sai-room-backend/schema.postgres.sql`을 적용한다.
 3. 임의의 긴 암호를 가진 `sai_runtime` LOGIN 역할을 생성한다. SUPERUSER, CREATEDB, CREATEROLE, REPLICATION, BYPASSRLS 권한은 주지 않는다.
 4. `sai-room-backend/grants.postgres.sql`을 적용한다. 앱 역할에는 `sai_private`의 데이터 읽기·쓰기 권한만 부여한다. 이 스키마는 Data API에 노출하지 않는다.
+
+> **이미 운영 중인 DB(스키마 v1)를 업데이트할 때**: 새 서버를 배포하기 전에 관리자 연결로 `sai-room-backend/migrations/postgres/002_beacon_presence.sql`을 한 번 실행한다(추가형·반복 실행 안전, 기존 데이터 변경 없음). 적용하지 않으면 새 서버가 시작을 거부하고 이 파일명을 로그에 남긴다. 새로 설치하는 DB는 위 1–4단계에 이미 포함된다.
+
 5. Supabase Connect에서 실제 Session pooler 호스트를 복사한다. 호스트는 지역명으로 추측하지 않는다. 접속 사용자명은 `sai_runtime.<project-ref>`이다.
 
 ## Render 생성
