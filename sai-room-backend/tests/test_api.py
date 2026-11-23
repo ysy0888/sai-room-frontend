@@ -19,6 +19,19 @@ CODE='Test-Initial-Code-2026'
 
 @pytest.fixture
 def client(tmp_path,monkeypatch):
+    pg_url = os.environ.get('SAI_TEST_POSTGRES_URL')
+    if pg_url:
+        from urllib.parse import urlsplit
+        parts = urlsplit(pg_url)
+        assert parts.hostname in ('localhost','127.0.0.1') and parts.path == '/sai_test', 'Only an isolated local test database may be reset'
+        import psycopg
+        with psycopg.connect(pg_url, autocommit=True) as conn:
+            conn.execute((Path(__file__).resolve().parents[1]/'schema.postgres.sql').read_text())
+            tables = conn.execute("SELECT tablename FROM pg_tables WHERE schemaname='sai_private' AND tablename != 'schema_version'").fetchall()
+            from psycopg import sql
+            conn.execute(sql.SQL('TRUNCATE {} RESTART IDENTITY CASCADE').format(sql.SQL(',').join(sql.Identifier('sai_private',r[0]) for r in tables)))
+            conn.execute('INSERT INTO sai_private.room_state VALUES (1,0)')
+        monkeypatch.setenv('SAI_DATABASE_URL',pg_url)
     monkeypatch.setattr(database,'DB_PATH',tmp_path/'test.db')
     monkeypatch.setattr(security,'DB_PATH',tmp_path/'test.db')
     monkeypatch.setenv('SAI_INITIAL_OPERATOR_CODE',CODE)

@@ -12,6 +12,20 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: sai_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: isolated-ci-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d sai_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -29,5 +43,9 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run test:server
+      - name: Verify API against PostgreSQL
+        run: npm run test:server
+        env:
+          SAI_TEST_POSTGRES_URL: postgresql://postgres:isolated-ci-only@127.0.0.1:5432/sai_test
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser

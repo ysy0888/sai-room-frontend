@@ -8,7 +8,7 @@ from urllib.parse import urlsplit
 from uuid import uuid4
 from hmac import compare_digest
 from fastapi import HTTPException, Request, Response
-from database import get_connection, DB_PATH
+from database import get_connection, DB_PATH, postgres_enabled
 from auth import hash_password, verify_password, token_hash
 
 PRODUCTION = os.environ.get('SAI_ENV') == 'production'
@@ -43,7 +43,7 @@ def initial_operator_code():
         if len(code) < 12 or len(code) > 128 or code == 'SAI-STAFF-DEMO':
             raise RuntimeError('Initial operator code must be 12–128 characters, never the public demo code')
         # The local file is deliberately outside the publicly served directories.
-        if not os.environ.get('SAI_INITIAL_OPERATOR_CODE'):
+        if not os.environ.get('SAI_INITIAL_OPERATOR_CODE') and not postgres_enabled():
             target = Path(str(DB_PATH) + '.initial-operator-code')
             fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
             with os.fdopen(fd, 'w') as file:

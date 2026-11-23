@@ -6,8 +6,21 @@ from pathlib import Path
 
 DB_PATH = Path(os.environ.get("SAI_DB_PATH", Path(__file__).resolve().parent / "sai.db"))
 
+def postgres_enabled():
+    return bool(os.environ.get('SAI_DATABASE_URL'))
+
 @contextmanager
 def get_connection():
+    if postgres_enabled():
+        from postgres import connection
+        with connection() as conn:
+            yield conn
+        return
+    with sqlite_connection() as conn:
+        yield conn
+
+@contextmanager
+def sqlite_connection():
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     created = not DB_PATH.exists()
     conn = sqlite3.connect(DB_PATH, timeout=15)
@@ -23,6 +36,13 @@ def get_connection():
         conn.close()
 
 def init_db():
+    if postgres_enabled():
+        from postgres import verify_schema
+        verify_schema()
+        return
+    init_sqlite()
+
+def init_sqlite():
     with get_connection() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS reservations (

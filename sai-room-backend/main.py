@@ -10,7 +10,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
-from database import get_connection, init_db
+from database import get_connection, init_db, postgres_enabled
 from security import PRODUCTION, PUBLIC_ORIGIN, current_user, initial_operator_code
 from api_v1 import router
 from maintenance import daily_backup
@@ -19,9 +19,9 @@ ROOT=Path(__file__).resolve().parent.parent
 
 @asynccontextmanager
 async def lifespan(app):
-    if PRODUCTION and not os.environ.get('SAI_DB_PATH'):
-        raise RuntimeError('Production requires SAI_DB_PATH on persistent storage')
-    backups = bool(os.environ.get('SAI_BACKUP_DIR'))
+    if PRODUCTION and not postgres_enabled() and not os.environ.get('SAI_DB_PATH'):
+        raise RuntimeError('Production requires SAI_DATABASE_URL or SAI_DB_PATH on persistent storage')
+    backups = not postgres_enabled() and bool(os.environ.get('SAI_BACKUP_DIR'))
     if backups:
         await asyncio.to_thread(daily_backup)
     init_db()
@@ -42,6 +42,9 @@ async def lifespan(app):
             task.cancel()
             with suppress(asyncio.CancelledError):
                 await task
+        if postgres_enabled():
+            from postgres import close_pool
+            close_pool()
 
 app=FastAPI(title='SAI ROOM',lifespan=lifespan,docs_url=None if PRODUCTION else '/api/docs',redoc_url=None,openapi_url=None if PRODUCTION else '/api/openapi.json')
 allowed_hosts=[urlsplit(PUBLIC_ORIGIN).hostname] if PRODUCTION else ['localhost','127.0.0.1','testserver']

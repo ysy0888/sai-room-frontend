@@ -1,45 +1,44 @@
-# SAI ROOM 운영 배포
+# SAI ROOM 무료 배포
 
-프론트와 FastAPI를 같은 Render Web Service에 배포합니다. 별도의 프론트 주소나 CORS 예외가 필요하지 않습니다. 회원·예약·글·공 이미지는 `/var/data/sai.db`에 저장하며, 테스트 DB는 업로드하지 않습니다.
+프론트엔드와 FastAPI를 Render Free 웹 서비스 한 개에서 제공하고, 데이터는 Supabase Free PostgreSQL에 저장한다. 재배포·서버 절전으로 회원·예약·문의·입실 상태가 사라지지 않는다. 유료 인스턴스와 영구 디스크는 생성하지 않는다.
 
-## 구성
+## 제한
 
-- 저장소: `ysy0888/sai-room-frontend`, 브랜치 `feature/auth-frontend`
-- Blueprint: `render.yaml`
-- 리전: Singapore, 서버: Starter, 영구 디스크: 1GB
-- 상태 확인: `/healthz` (DB 연결 확인, 회원 데이터 비노출)
-- 시작: `python scripts/start_server.py` (`0.0.0.0:$PORT`, worker 1개)
-- 업데이트: GitHub 검사를 통과한 커밋을 자동 배포
-- 시작 시 가상 회원·글·예약을 생성하지 않음
+Render 무료 서버는 약 15분간 접속이 없으면 잠들며, 다음 접속 시 기동에 약 1분이 걸릴 수 있다. 무료 사용량을 넘으면 서비스가 제한될 수 있다. Supabase 무료 프로젝트도 장기간 비활성 시 일시 중지될 수 있다. 이 구성은 동아리 초기 사용용이며 상시 응답·가용성을 보장하지 않는다. 결제나 유료 플랜 전환은 별도 승인한다.
 
-## 처음 배포
+## PostgreSQL 준비
 
-1. Render에서 이 비공개 저장소만 연결하고 Blueprint로 `render.yaml`을 선택합니다. 비용을 확인한 뒤 생성합니다.
-2. 배포 완료 후 발급된 HTTPS 주소에서 로그인 화면과 `/healthz` 응답을 확인합니다.
-3. Render 서비스의 Shell에서 `python sai-room-backend/create_admin.py`를 실행합니다. 실제 관리자가 이름·학번·이메일·비밀번호를 직접 입력합니다. 비밀번호는 화면에 표시되지 않습니다. 이미 관리자가 있다면 새 관리자를 만들지 않습니다.
-4. 같은 Shell에서 초기 운영진 코드 파일 `/var/data/sai.db.initial-operator-code`를 확인합니다. 외부에 공개하지 않고 운영진에게만 전달합니다. 이후 앱 설정에서 코드를 변경할 수 있습니다.
-5. 관리자로 로그인해 가입 신청을 승인합니다. 일반 멤버와 운영진 모두 승인 전에는 보호된 화면을 사용할 수 없습니다.
-6. 동아리원에게 HTTPS 주소를 공유합니다. 회원가입 → 관리자 승인 → 로그인 순서입니다.
+1. SAI 전용 Free 조직/프로젝트를 생성한다. 다른 프로젝트의 데이터를 재사용하지 않는다.
+2. 관리자 연결로 `sai-room-backend/schema.postgres.sql`을 적용한다.
+3. 임의의 긴 암호를 가진 `sai_runtime` LOGIN 역할을 생성한다. SUPERUSER, CREATEDB, CREATEROLE, REPLICATION, BYPASSRLS 권한은 주지 않는다.
+4. `sai-room-backend/grants.postgres.sql`을 적용한다. 앱 역할에는 `sai_private`의 데이터 읽기·쓰기 권한만 부여한다. 이 스키마는 Data API에 노출하지 않는다.
+5. Supabase Connect에서 실제 Session pooler 호스트를 복사한다. 호스트는 지역명으로 추측하지 않는다. 접속 사용자명은 `sai_runtime.<project-ref>`이다.
 
-## 환경변수
+## Render 생성
 
-`SAI_ENV=production`, `SAI_DB_PATH=/var/data/sai.db`, `SAI_BACKUP_DIR=/var/data/backups`는 Blueprint에서 설정합니다. 공개 출처는 Render의 `RENDER_EXTERNAL_URL`을 사용합니다. 사용자 도메인을 연결할 때만 `SAI_PUBLIC_ORIGIN=https://실제-도메인`으로 바꾸고 재배포합니다. 운영 쿠키는 HTTPS에서만 동작합니다.
+`render.yaml` Blueprint를 적용한다. 브랜치는 `feature/auth-frontend`, 요금은 Free, 디스크는 없음이다.
 
-무료 Web Service의 임시 파일 시스템에 SQLite를 두면 재배포 후 데이터가 사라질 수 있으므로 이 구성은 영구 디스크가 필요합니다. 인스턴스는 1개만 운영합니다. 디스크가 연결된 서비스는 배포 중 짧은 중단이 발생할 수 있습니다.
+- `SAI_DATABASE_URL`: 위 전용 역할의 PostgreSQL 연결 문자열. Render 비밀 환경 변수에만 저장한다.
+- `SAI_ENV=production`: HTTPS 전용 세션과 호스트 검증을 켠다.
+- `RENDER_EXTERNAL_URL`: Render가 자동으로 주는 앱 주소를 사용한다.
+- `SAI_INITIAL_OPERATOR_CODE`: Render가 자동 생성한다. 최초 DB 초기화에만 사용하며 앱에서 변경한 코드를 덮어쓰지 않는다.
 
-## 백업과 복구
+서버는 인증서를 검증하는 TLS로 DB에 연결한다. GitHub Actions가 통과해야 자동 배포된다. `/healthz`가 DB 조회까지 성공해야 배포를 완료한다.
 
-서버는 시작 시와 매시간 일별 백업 여부를 확인합니다. SQLite 백업 API로 일관된 사본을 만들고 검사한 뒤 `/var/data/backups/sai-YYYY-MM-DD.sqlite3`에 저장합니다. 최근 7개 일별 백업을 보관합니다. 파일은 공개 경로 밖에 있으며 소유자만 읽을 수 있습니다. 첫 실행에서 DB가 없으면 다음 정기 작업부터 백업됩니다.
+## 첫 관리자
 
-서버 전체 또는 디스크 손실에 대비하려면 운영자가 이 백업을 주기적으로 별도 보관소에 내려받아야 합니다. 같은 디스크의 일별 백업만으로 디스크 전체 손실을 복구할 수는 없습니다.
+최초 관리자는 공개 가입 순서로 자동 부여하지 않는다. 소유자가 실제 앱에서 가입한 뒤, 본인 이메일을 확인하여 해당 한 계정만 관리자·승인 상태로 설정한다. 임의 테스트 계정은 운영 DB에 넣지 않는다. 이후 회원 승인은 앱 내부 관리자 메뉴에서 처리한다. 최초 운영진 가입 코드는 Render 비밀 환경 변수에서 소유자가 확인하거나, 관리자가 앱에서 새 코드로 교체한다.
 
-복구 시 서비스를 중단하고 현재 DB를 별도로 보관한 뒤 확인한 백업을 `SAI_DB_PATH`로 복사합니다. 운영 DB를 실행 중인 상태에서 덮어쓰지 않습니다. 복구 후 로그인·예약·문의함을 확인합니다.
+## 점검 및 백업
 
-## 운영 범위
+- 로그인하지 않은 사용자의 보호 API는 401, 일반 회원의 운영진 기능은 403이어야 한다.
+- 예약 중복, 문의 비공개, 입퇴실 인원 증분 반영을 확인한다.
+- DB 암호·운영진 코드·사용자 DB는 GitHub나 프론트 파일에 포함하지 않는다.
+- Supabase Free의 자동 백업을 보장하지 않는다. 운영자는 정기적으로 `pg_dump` 등으로 암호화된 별도 보관소에 백업해야 한다.
+- 기존 SQLite 로컬 실행은 계속 지원한다. SQLite 일별 백업 코드는 로컬/유료 영구 디스크 구성에서만 사용한다.
 
-- 인원은 직접 입퇴실 기록으로 집계하며 30초마다 갱신합니다. 입실은 4시간 뒤 만료됩니다.
-- 이메일 인증, 비밀번호 재설정, 비콘 자동 감지는 현재 포함하지 않습니다.
-- 휴대폰 흔들림은 HTTPS와 사용자의 센서 권한이 필요하며 기기별 실물 확인이 필요합니다.
-- 계정·세션·비밀 코드·DB·백업 파일을 GitHub에 올리지 않습니다.
+## 검증
 
-공식 참고: [Render 디스크](https://render.com/docs/disks), [FastAPI 배포](https://render.com/docs/deploy-fastapi), [요금](https://render.com/pricing).
+GitHub CI는 프론트 빌드·타입·단위 검사, SQLite API, PostgreSQL API와 동시 쓰기, 브라우저 기능 검사를 수행한다. PostgreSQL 테스트 데이터베이스는 localhost의 `sai_test`만 초기화할 수 있도록 제한한다.
+
+공식 문서: https://render.com/docs/free · https://supabase.com/docs/guides/database/connecting-to-postgres
