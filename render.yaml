@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: sai-room
+    runtime: python
+    plan: starter
+    region: singapore
+    branch: feature/auth-frontend
+    buildCommand: pip install -r sai-room-backend/requirements.txt
+    startCommand: python scripts/start_server.py
+    healthCheckPath: /healthz
+    autoDeployTrigger: checksPass
+    disk:
+      name: sai-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.12
+      - key: SAI_ENV
+        value: production
+      - key: SAI_DB_PATH
+        value: /var/data/sai.db
+      - key: SAI_BACKUP_DIR
+        value: /var/data/backups

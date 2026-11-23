@@ -14,6 +14,7 @@
     currentRoute = "",
     toastTimer,
     confirmResolver;
+  let selectedTimeEdited = false;
   let busy = false, bootError = '', sessionExpired = false, authenticated = false, booting = false, authRevision = 0;
   const remote = true;
   let signupEmail='',signupDone=false,applicationFilter='pending',applications=null,applicationsError='',applicationsLoading=false,applicationRevision=0;
@@ -136,7 +137,8 @@
     return SaiMotion.gauge(style, count, mini);
   }
   function appHeader(title, back, action = "") {
-    header.innerHTML = `${back ? `<button class="icon-button" data-action="go" data-route="${back}" aria-label="이전 화면">${icon("back")}</button>` : '<span class="header-spacer"></span>'}<h1>${title}</h1><div class="header-actions">${action}</div>`;
+    header.innerHTML = `${back ? `<button class="icon-button" data-action="go" data-route="${back}" aria-label="이전 화면">${icon("back")}</button>` : '<span class="header-spacer"></span>'}<h1 class="sr-only">${title}</h1><div class="header-actions">${action}</div>`;
+    header.dataset.empty=String(!back&&!action);
   }
   function setActions(html = "") {
     const dock = $("#action-dock");
@@ -214,7 +216,7 @@
   }
   function reservations() {
     // 저장된 예약 위에 선택 표시가 겹치지 않도록 빈 구간으로 이동합니다.
-    if (overlapping(selectedSlot) || isPastSlot(selectedSlot)) {
+    if (!selectedTimeEdited && (overlapping(selectedSlot) || isPastSlot(selectedSlot))) {
       const starts = Array.from({ length: 28 }, (_, i) => 540 + i * 30);
       starts.sort(
         (a, b) =>
@@ -229,10 +231,13 @@
         .find((slot) => !overlapping(slot) && !isPastSlot(slot));
       selectedSlot = free || { ...selectedSlot, start: 1200, end: 1260 };
     }
-    const selectable = !overlapping(selectedSlot) && !isPastSlot(selectedSlot);
+    const selectionError = isPastSlot(selectedSlot) ? '앞으로 이용할 시간을 선택해주세요.' : overlapping(selectedSlot) ? '다른 예약과 겹칩니다. 시간을 조절해주세요.' : '';
+    const selectable = !selectionError;
     appHeader("예약", null, remote ? `<button class="icon-button" data-action="refresh-data" aria-label="예약 목록 새로고침">${icon("refresh")}</button>` : "");
     mainNav("reservations");
-    const dates = [0, 1, 2].map((i) => addDay(selectedDate, i));
+    const weekStart=addDay(selectedDate,-((dateObj(selectedDate).getDay()+6)%7));
+    const dates=Array.from({length:7},(_,i)=>addDay(weekStart,i));
+    const weekdays=['월','화','수','목','금','토','일'];
     let grid = "";
     const start = 540,
       end = 1380,
@@ -240,28 +245,29 @@
     for (let t = start; t < end; t += 30) {
       const top = ((t - start) / 30) * cell;
       grid += `<span class="time-label" style="top:${top}px">${time(t)}</span>`;
-      dates.forEach((d, i) => {
-        grid += `<button class="slot" style="top:${top}px;left:${(i * 100) / 3}%;height:${cell}px" data-action="slot" data-date="${d}" data-start="${t}" aria-label="${fmtDate(d, false)} ${time(t)} 예약 시간 선택" ${isPastSlot({date:d,start:t})?'disabled':''}></button>`;
-      });
+      grid += `<button class="slot" style="top:${top}px;left:0;height:${cell}px" data-action="slot" data-date="${selectedDate}" data-start="${t}" aria-label="${fmtDate(selectedDate, false)} ${time(t)} 예약 시간 선택" ${isPastSlot({date:selectedDate,start:t})?'disabled':''}></button>`;
     }
     state.bookings
-      .filter((b) => dates.includes(b.date))
+      .filter((b) => b.date===selectedDate)
       .forEach((b) => {
-        const col = dates.indexOf(b.date);
-        grid += `<button class="booking-block ${b.owner === "me" ? "mine" : ""} ${b.end - b.start === 30 ? "short" : ""}" style="top:${((b.start - start) / 30) * cell + 2}px;left:calc(${(col * 100) / 3}% + 3px);height:${((b.end - b.start) / 30) * cell - 4}px" data-action="go" data-route="reservation/${b.id}"><strong>${esc(b.purpose)}: ${esc(b.name)}</strong><span>${b.people}명</span><small>${time(b.start)}–${time(b.end)}</small></button>`;
+        grid += `<button class="booking-block ${b.owner === "me" ? "mine" : ""} ${b.end - b.start === 30 ? "short" : ""}" style="top:${((b.start - start) / 30) * cell + 2}px;left:3px;height:${((b.end - b.start) / 30) * cell - 4}px" data-action="go" data-route="reservation/${b.id}"><strong>${esc(b.purpose)}: ${esc(b.name)}</strong><span>${b.people}명</span><small>${time(b.start)}–${time(b.end)}</small></button>`;
       });
-    if (dates.includes(selectedSlot.date) && !overlapping(selectedSlot) && !isPastSlot(selectedSlot)) {
-      const c = dates.indexOf(selectedSlot.date);
-      grid += `<div class="selection-block" style="top:${((selectedSlot.start - start) / 30) * cell + 2}px;left:calc(${(c * 100) / 3}% + 3px);height:${((selectedSlot.end - selectedSlot.start) / 30) * cell - 4}px"><strong>선택한 시간</strong><span>${time(selectedSlot.start)}–${time(selectedSlot.end)}</span></div>`;
+    if (selectedSlot.date===selectedDate && !overlapping(selectedSlot) && !isPastSlot(selectedSlot)) {
+      grid += `<div class="selection-block" style="top:${((selectedSlot.start - start) / 30) * cell + 2}px;left:3px;height:${((selectedSlot.end - selectedSlot.start) / 30) * cell - 4}px"><strong>선택한 시간</strong><span>${time(selectedSlot.start)}–${time(selectedSlot.end)}</span></div>`;
     }
-    setActions(`<div class="booking-actions"><div class="selection-summary ${selectable?'':'unavailable'}"><span>${fmtDate(selectedSlot.date, false)}</span><strong>${selectable?`${time(selectedSlot.start)}–${time(selectedSlot.end)}`:'예약 가능한 시간이 없습니다'}</strong></div><button class="primary-button booking-submit" data-action="go" data-route="reservation/new" ${selectable?'':'disabled'}>${selectable?'예약하기':'다른 날짜를 선택하세요'} </button></div>`);
-    return `<div class="stack screen-enter"><div class="date-switch"><button class="icon-button" data-action="date-prev" aria-label="이전 날짜">${icon("back")}</button><label class="date-label">${fmtDate(selectedDate)}<input type="date" id="calendar-date" value="${selectedDate}" aria-label="예약 날짜 선택"></label><button class="icon-button" data-action="date-next" aria-label="다음 날짜">${icon("next")}</button></div><div class="day-headings">${dates.map((d, i) => `<button class="day-heading ${selectedSlot.date === d ? "active" : ""}" data-action="date-select" data-date="${d}" aria-pressed="${selectedSlot.date === d}">${dateObj(d).toLocaleDateString("ko-KR", { weekday: "short", day: "numeric" })}</button>`).join("")}</div><div class="timetable" aria-label="3일 예약 타임테이블"><div class="time-grid" style="height:${((end - start) / 30) * cell}px">${grid}<span class="time-label" style="top:${((end - start) / 30) * cell - 10}px">23:00</span></div></div><div class="legend"><span><i class="legend-dot mine"></i>내 예약</span><span><i class="legend-dot"></i>다른 예약</span><span>30분 단위</span></div></div>`;
+    setActions(`<div class="booking-actions"><div class="selection-summary ${selectable?'':'unavailable'}"><span>${fmtDate(selectedSlot.date, false)}</span><strong>${selectable?`${time(selectedSlot.start)}–${time(selectedSlot.end)}`:'시간을 다시 선택해주세요'}</strong></div><button class="primary-button booking-submit" data-action="go" data-route="reservation/new" ${selectable?'':'disabled'}>${selectable?'예약하기':'시간을 다시 선택해주세요'} </button></div>`);
+    return `<div class="stack reservation-view screen-enter">
+      <div class="date-switch"><button class="icon-button" data-action="date-prev" aria-label="이전 주">${icon("back")}</button><label class="date-label">${dateObj(selectedDate).toLocaleDateString('ko-KR',{year:'numeric',month:'long'})}<input type="date" id="calendar-date" value="${selectedDate}" aria-label="예약 날짜 선택"></label><button class="icon-button" data-action="date-next" aria-label="다음 주">${icon("next")}</button></div>
+      <div class="day-headings week-strip" aria-label="예약 요일 선택">${dates.map((d,i)=>`<button class="day-heading ${selectedDate===d?'active':''} ${d===SaiData.day()?'is-today':''}" data-action="date-select" data-date="${d}" aria-label="${fmtDate(d)}${d===SaiData.day()?', 오늘':''}" aria-pressed="${selectedDate===d}" ${d===SaiData.day()?'aria-current="date"':''}><span class="weekday-label">${weekdays[i]}</span><span class="day-number">${dateObj(d).getDate()}</span><span class="day-mark ${state.bookings.some(b=>b.date===d)?'has-bookings':''}" aria-hidden="true"></span></button>`).join('')}</div>
+      <section class="booking-time-picker" aria-label="예약 시간 조절"><div class="booking-time-fields"><label for="selection-start">시작<select id="selection-start">${timeOptions(selectedSlot.start,false)}</select></label><span aria-hidden="true">–</span><label for="selection-end">종료<select id="selection-end">${timeOptions(selectedSlot.end,true,selectedSlot.start+30)}</select></label></div><p id="selection-duration" aria-live="polite">${durationText(selectedSlot.end-selectedSlot.start)}</p>${selectionError?`<p class="time-selection-error" role="status">${selectionError}</p>`:''}</section>
+      <div class="timetable day-timetable" aria-label="${fmtDate(selectedDate)} 예약 시간표"><div class="time-grid" style="height:${((end-start)/30)*cell}px">${grid}<span class="time-label" style="top:${((end-start)/30)*cell-10}px">23:00</span></div></div><div class="legend"><span><i class="legend-dot mine"></i>내 예약</span><span><i class="legend-dot"></i>다른 예약</span><span>30분 단위</span></div></div>`;
   }
-  const timeOptions = (value, includeLast = true) =>
+  const durationText = minutes => `${Math.floor(minutes/60)?Math.floor(minutes/60)+'시간':''}${minutes%60?(minutes>=60?' ':'')+minutes%60+'분':''}`;
+  const timeOptions = (value, includeLast = true, minimum = 540) =>
     Array.from({ length: includeLast ? 29 : 28 }, (_, i) => 540 + i * 30)
       .map(
         (t) =>
-          `<option value="${t}" ${t === value ? "selected" : ""}>${time(t)}</option>`,
+          `<option value="${t}" ${t === value ? "selected" : ""} ${t<minimum?"disabled":""}>${time(t)}</option>`,
       )
       .join("");
   function bookingForm(id) {
@@ -279,14 +285,14 @@
       edit ? `reservation/${id}` : "reservations",
     );
     mainNav("", false);
-    return `<form id="booking-form" data-id="${edit ? esc(edit.id) : ""}" class="stack screen-enter"><span class="chip">예약 정보</span><div class="form-field"><label for="booking-date">이용 날짜</label><input type="date" id="booking-date" name="date" value="${b.date}" required></div><div class="form-grid"><div class="form-field"><label for="booking-start">시작 시간</label><select id="booking-start" name="start">${timeOptions(b.start, false)}</select></div><div class="form-field"><label for="booking-end">종료 시간</label><select id="booking-end" name="end">${timeOptions(b.end)}</select></div></div><div class="form-field"><label for="booking-purpose">이용 목적</label><input id="booking-purpose" name="purpose" maxlength="20" value="${esc(b.purpose)}" placeholder="예: 스터디" required></div><div class="form-field"><label for="booking-name">대표자 이름</label><input id="booking-name" name="name" maxlength="20" value="${esc(b.name)}" placeholder="대표자 이름" required></div><div class="form-field"><label for="booking-people">사용 인원</label><input id="booking-people" name="people" type="number" min="1" max="15" value="${b.people}" required><p class="field-hint">대표자를 포함한 전체 인원 (1–15명)</p></div><div class="summary-card"><p>예약 미리보기</p><strong id="booking-preview">${esc(b.purpose)}: ${esc(b.name)} · ${b.people}명</strong><span id="booking-time-preview">${time(b.start)}–${time(b.end)}</span></div><p class="form-error" id="booking-error" role="alert"></p><p class="helper">다른 예약과 겹치는 시간은 예약할 수 없습니다.</p><button class="primary-button" type="submit">${edit ? "수정 내용 저장" : "예약 저장"} ${icon("check")}</button></form>`;
+    return `<form id="booking-form" data-id="${edit ? esc(edit.id) : ""}" class="stack screen-enter"><span class="chip">예약 정보</span><div class="form-field"><label for="booking-date">이용 날짜</label><input type="date" id="booking-date" name="date" value="${b.date}" required></div><div class="form-grid"><div class="form-field"><label for="booking-start">시작 시간</label><select id="booking-start" name="start">${timeOptions(b.start, false)}</select></div><div class="form-field"><label for="booking-end">종료 시간</label><select id="booking-end" name="end">${timeOptions(b.end,true,b.start+30)}</select></div></div><div class="form-field"><label for="booking-purpose">이용 목적</label><input id="booking-purpose" name="purpose" maxlength="20" value="${esc(b.purpose)}" placeholder="예: 스터디" required></div><div class="form-field"><label for="booking-name">대표자 이름</label><input id="booking-name" name="name" maxlength="20" value="${esc(b.name)}" placeholder="대표자 이름" required></div><div class="form-field"><label for="booking-people">사용 인원</label><input id="booking-people" name="people" type="number" min="1" max="15" value="${b.people}" required><p class="field-hint">대표자를 포함한 전체 인원 (1–15명)</p></div><div class="summary-card"><p>예약 미리보기</p><strong id="booking-preview">${esc(b.purpose)}: ${esc(b.name)} · ${b.people}명</strong><span id="booking-time-preview">${time(b.start)}–${time(b.end)}</span></div><p class="form-error" id="booking-error" role="alert"></p><p class="helper">다른 예약과 겹치는 시간은 예약할 수 없습니다.</p><button class="primary-button" type="submit">${edit ? "수정 내용 저장" : "예약 저장"} ${icon("check")}</button></form>`;
   }
   function bookingDetail(id) {
     const b = state.bookings.find((b) => b.id === id);
     if (!b) return notFound();
     appHeader("예약 상세", "reservations");
     mainNav("", false);
-    return `<div class="stack screen-enter"><span class="chip">${b.owner === "me" ? "내 예약" : "동아리방 예약"}</span><h2 class="detail-title">${esc(b.purpose)}: ${esc(b.name)}</h2><div class="surface detail-body"><div class="settings-row"><span>이용 날짜</span><strong>${fmtDate(b.date, false)}</strong></div><div class="settings-row"><span>이용 시간</span><strong>${time(b.start)}–${time(b.end)}</strong></div><div class="settings-row"><span>예약 주체</span><strong>${esc(b.name)}</strong></div><div class="settings-row"><span>사용 인원</span><strong>${b.people}명</strong></div></div>${b.owner === "me" ? `<button class="primary-button" data-action="go" data-route="reservation/edit/${b.id}">예약 수정 ${icon("edit")}</button><button class="danger-button" data-action="cancel-booking" data-id="${b.id}">예약 취소</button>` : '<p class="helper">본인 예약만 수정·취소할 수 있어요.</p>'}<button class="secondary-button" data-action="go" data-route="reservations">타임테이블로 돌아가기</button></div>`;
+    return `<div class="stack screen-enter"><span class="chip">${b.owner === "me" ? "내 예약" : "동아리방 예약"}</span><h2 class="detail-title">${esc(b.purpose)}: ${esc(b.name)}</h2><div class="surface detail-body"><div class="settings-row"><span>이용 날짜</span><strong>${fmtDate(b.date, false)}</strong></div><div class="settings-row"><span>이용 시간</span><strong>${time(b.start)}–${time(b.end)}</strong></div><div class="settings-row"><span>예약 주체</span><strong>${esc(b.name)}</strong></div><div class="settings-row"><span>사용 인원</span><strong>${b.people}명</strong></div></div>${b.owner === "me" ? `<button class="primary-button" data-action="go" data-route="reservation/edit/${b.id}">시간·예약 정보 변경 ${icon("edit")}</button><button class="danger-button" data-action="cancel-booking" data-id="${b.id}">예약 취소</button>` : '<p class="helper">본인 예약만 수정·취소할 수 있어요.</p>'}<button class="secondary-button" data-action="go" data-route="reservations">타임테이블로 돌아가기</button></div>`;
   }
   function board(inbox=false) {
     if(inbox)boardKind="inquiry";
@@ -445,7 +451,7 @@
     if (authenticated && route === "reservations")
       $(".timetable").scrollTop = Math.max(
         0,
-        ((selectedSlot.start - 540) / 30) * 44 - 210,
+        ((selectedSlot.start - 540) / 30) * 44 - Math.min(80, $(".timetable").clientHeight / 4),
       );
     if(approved())SaiMotion.mount(view,reading,state.settings.gauge,state.settings.theme);
     document.body.dataset.route=booting?'loading':!authenticated?(requested==='signup'?'signup':'login'):!approved()?'pending':route.split('/')[0];
@@ -477,7 +483,16 @@
     if(action==='logout'){if(await mutate(()=>SaiBackend.logout(),btn)){clearSession(false);history.replaceState(null,'',location.pathname+location.search+'#login');render();}return;}
     if(!approved())return;
     if(action==='refresh-code'&&staff()){codeInfo=null;codeSuccess=false;codeError='';await loadCodeInfo();return;}
-    if(action==='toggle-check-in'){const revision=authRevision;const success=await mutate(async()=>{const result=await SaiBackend.setPresence(!checkedIn);if(revision===authRevision)checkedIn=result.checkedIn;},btn);if(success){await SaiPresence.refresh();render();}return;}
+    if(action==='toggle-check-in'){
+      const revision=authRevision;
+      await mutate(async()=>{
+        const result=await SaiBackend.setPresence(!checkedIn);
+        if(revision!==authRevision)return;
+        await SaiPresence.refresh({afterWrite:true});
+        if(revision===authRevision){checkedIn=result.checkedIn;updateCheckInRow();}
+      },btn);
+      return;
+    }
     if(action==='refresh-applications'){applications=null;loadApplications();return;}
     if(action==='application-filter'&&admin()){applicationFilter=value;render();return;}
     if(action==='decide-member'&&admin()){
@@ -496,11 +511,11 @@
     else if (action === "refresh") {
       await SaiPresence.refresh();
     } else if (action === "date-prev" || action === "date-next") {
-      selectedDate = addDay(selectedDate, action === "date-prev" ? -1 : 1);
-      selectedSlot = { date: selectedDate, start: 1200, end: 1260 };
+      selectedDate = addDay(selectedDate, action === "date-prev" ? -7 : 7);
+      selectedSlot = { ...selectedSlot, date: selectedDate };selectedTimeEdited=false;
       render();
     } else if (action === "date-select") {
-      selectedSlot={date:btn.dataset.date,start:1200,end:1260};render();
+      selectedDate=btn.dataset.date;selectedSlot={...selectedSlot,date:selectedDate};selectedTimeEdited=false;render();
     } else if (action === "slot") {
       const start = Number(btn.dataset.start),
         slot = {
@@ -517,7 +532,7 @@
           return;
         }
       }
-      selectedSlot = slot;
+      selectedSlot = slot;selectedTimeEdited=false;
       const sc = $(".timetable").scrollTop;
       render();
       $(".timetable").scrollTop = sc;
@@ -591,9 +606,25 @@
       $("#character-count").textContent = `${e.target.value.length} / 2,000`;
   });
   document.addEventListener("change", async (e) => {
+    if (e.target.id === 'selection-start' || e.target.id === 'selection-end') {
+      const focusId=e.target.id,scroll=view.scrollTop;
+      if(focusId==='selection-start'){
+        const duration=selectedSlot.end-selectedSlot.start;
+        selectedSlot={...selectedSlot,start:Number(e.target.value),end:Math.min(1380,Number(e.target.value)+duration)};
+      }else selectedSlot={...selectedSlot,end:Number(e.target.value)};
+      selectedTimeEdited=true;render();view.scrollTop=scroll;$('#'+focusId).focus({preventScroll:true});
+      return;
+    }
+    if(e.target.id==='booking-start'){
+      const start=Number(e.target.value),end=$('#booking-end');
+      if(Number(end.value)<=start)end.value=String(start+30);
+      Array.from(end.options).forEach(option=>option.disabled=Number(option.value)<=start);
+      $('#booking-time-preview').textContent=`${time(start)}–${time(Number(end.value))}`;
+      $('#booking-error').textContent='';
+    }
     if (e.target.id === "calendar-date" && e.target.value) {
       selectedDate = e.target.value;
-      selectedSlot = { date: selectedDate, start: 1200, end: 1260 };
+      selectedSlot = {...selectedSlot,date:selectedDate};selectedTimeEdited=false;
       render();
     }
   });
@@ -657,7 +688,7 @@
       if(remote && !await mutate(async()=>{b=await SaiBackend.booking(b,f.dataset.id||null);},f.querySelector('[type="submit"]'),$('#booking-error')))return;
       state.bookings = state.bookings.filter((x) => x.id !== b.id);
       state.bookings.push(b);
-      selectedDate = b.date;
+      selectedDate = b.date;selectedTimeEdited=false;
       selectedSlot = {
         date: b.date,
         start: Math.min(b.end, 1350),
@@ -699,7 +730,12 @@
     }
   });
   window.addEventListener("hashchange", render);
-  SaiPresence.subscribe(value=>{reading=value;if(value.snapshot){state.settings.occupancy=value.snapshot.count;state.settings.capacity=value.snapshot.referenceCapacity;if(typeof value.snapshot.checkedIn==='boolean'&&checkedIn!==value.snapshot.checkedIn){checkedIn=value.snapshot.checkedIn;const row=document.querySelector('.check-in-row');if(row){row.querySelector('strong').textContent=checkedIn?'동방에 있어요':'동방에 도착했나요?';const button=row.querySelector('button');button.textContent=checkedIn?'퇴실하기':'입실하기';button.className=checkedIn?'secondary-button':'primary-button';}}}if(approved())SaiMotion.update(value);});
+  function updateCheckInRow(){
+    const row=document.querySelector('.check-in-row');if(!row)return;
+    row.querySelector('strong').textContent=checkedIn?'동방에 있어요':'동방에 도착했나요?';
+    const button=row.querySelector('button');button.textContent=checkedIn?'퇴실하기':'입실하기';button.className=checkedIn?'secondary-button':'primary-button';
+  }
+  SaiPresence.subscribe(value=>{reading=value;if(value.snapshot){state.settings.occupancy=value.snapshot.count;state.settings.capacity=value.snapshot.referenceCapacity;if(typeof value.snapshot.checkedIn==='boolean'&&checkedIn!==value.snapshot.checkedIn){checkedIn=value.snapshot.checkedIn;updateCheckInRow();}}if(approved())SaiMotion.update(value);});
   window.addEventListener('sai:session-expired',()=>clearSession(authenticated));
   window.addEventListener('sai:permissions-changed',()=>{clearSession(false);boot();});
   async function boot(){

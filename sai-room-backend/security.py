@@ -12,7 +12,10 @@ from database import get_connection, DB_PATH
 from auth import hash_password, verify_password, token_hash
 
 PRODUCTION = os.environ.get('SAI_ENV') == 'production'
-PUBLIC_ORIGIN = os.environ.get('SAI_PUBLIC_ORIGIN', 'http://127.0.0.1:5317').rstrip('/')
+PUBLIC_ORIGIN = (os.environ.get('SAI_PUBLIC_ORIGIN') or os.environ.get('RENDER_EXTERNAL_URL') or 'http://127.0.0.1:5317').rstrip('/')
+origin_parts = urlsplit(PUBLIC_ORIGIN)
+if not origin_parts.hostname or origin_parts.username or origin_parts.password or origin_parts.path or origin_parts.query or origin_parts.fragment:
+    raise RuntimeError('SAI_PUBLIC_ORIGIN must be an origin without a path or credentials')
 if PRODUCTION and not PUBLIC_ORIGIN.startswith('https://'):
     raise RuntimeError('Production requires SAI_PUBLIC_ORIGIN=https://your-domain')
 COOKIE = '__Host-sai_session' if PRODUCTION else 'sai_session'

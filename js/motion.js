@@ -43,6 +43,10 @@
     const previous=current?.snapshot; current=reading;
     const {snapshot,status,source,refreshing}=reading,n=snapshot?.count,cap=snapshot?.referenceCapacity??15;
     const delta=previous&&snapshot?n-previous.count:0;
+    if(snapshot?.roster&&snapshot.roster!==members){
+      memberRequest++;memberAbort?.abort();memberAbort=null;
+      members=snapshot.roster;memberError='';memberLoading=false;requestedSequence=snapshot.sequence;
+    }
     if(members&&snapshot&&members.sequence===snapshot.sequence&&members.count===snapshot.count&&status==='live')members.observedAt=snapshot.observedAt;
     // A changed snapshot invalidates names immediately, until a matching roster arrives.
     if(members && snapshot && (members.sequence!==snapshot.sequence || members.count!==snapshot.count)) {
@@ -89,7 +93,7 @@
     if(!wanted()||!current?.snapshot)return;
     const request=++memberRequest;memberAbort?.abort();memberAbort=new AbortController();
     const snap=current.snapshot; requestedSequence=snap.sequence;
-    members=null;memberError='';memberLoading=true;
+    memberError='';memberLoading=true;
     paintMembers();
     try {
       const data=await SaiBackend.members(memberAbort.signal);
@@ -98,6 +102,7 @@
       members=data;
     } catch(e) {
       if(request!==memberRequest)return;
+      members=null;
       memberError=e.status===403?'회원 목록을 볼 권한이 없습니다.':e.message||'회원 목록을 불러오지 못했습니다.';
     } finally {
       if(request===memberRequest){memberLoading=false;paintMembers();}

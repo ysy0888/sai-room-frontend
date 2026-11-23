@@ -62,7 +62,12 @@
     async comment(id,body,reply=false){return resource(await request('/posts/'+encodeURIComponent(id)+(reply?'/reply':'/comments'),{method:'POST',body:{body}}),'comment');},
     preference:body=>request('/me/preferences',{method:'PATCH',body}),
     async members(signal){return memberList(await request('/rooms/'+encodeURIComponent(config.roomId)+'/occupants',{signal}));},
-    occupancy:signal=>request('/rooms/'+encodeURIComponent(config.roomId)+'/occupancy',{signal}),
+    async occupancy(signal){
+      // Count and identities come from the same database snapshot, so the scene
+      // never substitutes anonymous placeholders between two network responses.
+      const data=await request('/rooms/'+encodeURIComponent(config.roomId)+'/occupants',{signal});
+      return {count:data.count,referenceCapacity:data.referenceCapacity,sequence:data.sequence,observedAt:data.observedAt,checkedIn:data.checkedIn,roster:memberList(data)};
+    },
     async signIn(email,password){await preauth();await request('/auth/login',{method:'POST',body:{email,password}});},
     async signUp({displayName,studentId,email,password,operatorCode=''}){if(typeof operatorCode!=='string'||operatorCode.trim().length>128)throw new ApiError('운영진 코드를 확인해주세요.',422,'INVALID_OPERATOR_CODE');const code=operatorCode.trim();await preauth();await request('/auth/signup',{method:'POST',body:{displayName,studentId,email,password,...(code?{operatorCode:code}:{})}});},
     async applications(){if(user?.role!=='admin'||user.membershipStatus!=='approved')throw new ApiError('관리자만 확인할 수 있습니다.',403);const data=await request('/admin/membership-applications');if(!Array.isArray(data)||data.some(x=>!x||typeof x.id!=='string'||!/^[a-zA-Z0-9_-]+$/.test(x.id)||typeof x.displayName!=='string'||typeof x.email!=='string'||(x.role!==undefined&&!['member','operator'].includes(x.role))||!['pending','approved','rejected'].includes(x.membershipStatus)||!Number.isFinite(x.createdAt)))throw new ApiError('가입 신청 목록을 확인해주세요.',502);return data.map(({id,displayName,email,role,membershipStatus,createdAt})=>({id,displayName,email,role:role||'member',membershipStatus,createdAt}));},
