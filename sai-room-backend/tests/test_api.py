@@ -38,6 +38,7 @@ def account(role='admin',status='approved'):
     identifier=str(uuid4());email=identifier+'@example.test'
     with database.get_connection() as conn:
         conn.execute('INSERT INTO users (id,name,student_id,username,email,password_hash,role,status,created_at) VALUES (?,?,?,?,?,?,?,?,?)',(identifier,'테스트 회원',identifier[:12],email,email,hash_password(PASSWORD),role,status,int(time.time())))
+        conn.execute('INSERT INTO policy_acceptance VALUES (?,?,?)',(identifier,'2026-11-23',int(time.time())))
     return identifier,email
 
 def signin(c,email,password=PASSWORD):
@@ -325,3 +326,15 @@ def test_beacon_lease_expires_and_fresh_events_renew_active_device(client,beacon
     assert client.get('/api/v1/rooms/sai-room/occupancy').json()['count']==0
     clock[0]+=2*86400
     assert send(event()).status_code==200  # usable past original 30-day expiry
+
+
+def test_android_presence_expires_without_fresh_advertisements(client,beacon_setup):
+    identifier,clock,event,send,_=beacon_setup
+    token=write(client,'/beacon/devices',{'platform':'android','consent':True}).json()['deviceToken']
+    assert send(event(),token).status_code==200
+    clock[0]+=240
+    assert send(event(),token).status_code==200
+    clock[0]+=240
+    assert client.get('/api/v1/rooms/sai-room/occupancy').json()['count']==1
+    clock[0]+=61
+    assert client.get('/api/v1/rooms/sai-room/occupancy').json()['count']==0

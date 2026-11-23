@@ -81,6 +81,13 @@ CREATE TABLE IF NOT EXISTS room_state (
 INSERT INTO room_state VALUES (1,0) ON CONFLICT(id) DO NOTHING;
 INSERT INTO schema_version VALUES (1,1) ON CONFLICT(id) DO NOTHING;
 
+
+CREATE TABLE IF NOT EXISTS policy_acceptance (user_id TEXT PRIMARY KEY REFERENCES users(id), version TEXT NOT NULL, accepted_at BIGINT NOT NULL);
+CREATE TABLE IF NOT EXISTS member_blocks (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), blocked_id TEXT NOT NULL REFERENCES users(id), created_at BIGINT NOT NULL, UNIQUE(user_id,blocked_id));
+CREATE TABLE IF NOT EXISTS safety_reports (id TEXT PRIMARY KEY, reporter_id TEXT NOT NULL REFERENCES users(id), target_kind TEXT NOT NULL, target_id TEXT NOT NULL, reason TEXT NOT NULL, detail TEXT NOT NULL, status TEXT NOT NULL, created_at BIGINT NOT NULL, UNIQUE(reporter_id,target_kind,target_id));
+CREATE TABLE IF NOT EXISTS moderation_hidden (target_kind TEXT NOT NULL, target_id TEXT NOT NULL, PRIMARY KEY(target_kind,target_id));
+CREATE INDEX IF NOT EXISTS reports_status_created ON safety_reports(status,created_at);
+
 -- Runtime role is provisioned separately. It has DML access, no schema ownership,
 -- no DDL, no Supabase admin privileges, and no access to other applications.
 DO $$ DECLARE item RECORD;

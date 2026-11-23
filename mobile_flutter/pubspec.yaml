@@ -1,0 +1,35 @@
+name: sai_room
+description: SAI 동아리방
+publish_to: none
+version: 2.0.0+20
+environment:
+  sdk: '>=3.12.0 <4.0.0'
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  http: 1.6.0
+  webview_flutter: 4.14.1
+  image_picker: 1.2.4
+  uuid: 4.6.0
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  flutter_lints: 6.0.0
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/sai-logo.png
+    - assets/scene/
+    - assets/scene/css/
+    - assets/scene/js/
+    - assets/scene/assets/fonts/
+  fonts:
+    - family: NotoSansKR
+      fonts:
+        - asset: assets/fonts/NotoSansKR-Regular.ttf
+        - asset: assets/fonts/NotoSansKR-Bold.ttf
+          weight: 700

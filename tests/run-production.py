@@ -19,6 +19,7 @@ with tempfile.TemporaryDirectory(prefix='sai-integration-') as tmp:
     with database.get_connection() as conn:
         for id,name,email,role in [('admin','관리자','admin@example.test','admin'),('operator','운영진','operator@example.test','operator'),('member','회원','member@example.test','member')]:
             conn.execute('INSERT INTO users (id,name,student_id,username,email,password_hash,role,status,created_at) VALUES (?,?,?,?,?,?,?,\'approved\',?)',(id,name,'test-'+id,email,email,hash_password('Browser-test-1234'),role,int(time.time())))
+            conn.execute('INSERT INTO policy_acceptance VALUES (?,?,?)',(id,'2026-11-23',int(time.time())))
     log=open(Path(tmp)/'server.log','w+')
     proc=subprocess.Popen([sys.executable,'-m','uvicorn','main:app','--app-dir',str(root/'sai-room-backend'),'--host','127.0.0.1','--port','5320'],env=os.environ,stdout=log,stderr=log)
     try:
@@ -26,7 +27,9 @@ with tempfile.TemporaryDirectory(prefix='sai-integration-') as tmp:
             try:
                 urllib.request.urlopen('http://127.0.0.1:5320',timeout=1);break
             except Exception: time.sleep(.1)
-        result=subprocess.run(['node',str(root/'tests/production-browser.cjs')],cwd=root,env={**os.environ,'TEST_URL':'http://127.0.0.1:5320'})
+        result=subprocess.CompletedProcess([],0) if os.environ.get('SAI_RELEASE_UI_ONLY')=='1' else subprocess.run(['node',str(root/'tests/production-browser.cjs')],cwd=root,env={**os.environ,'TEST_URL':'http://127.0.0.1:5320'})
+        if not result.returncode:
+            result=subprocess.run(['node',str(root/'tests/release-browser.cjs')],cwd=root,env={**os.environ,'TEST_URL':'http://127.0.0.1:5320'})
         if result.returncode:
             log.seek(0);print(log.read()[-12000:]);sys.exit(result.returncode)
     finally:

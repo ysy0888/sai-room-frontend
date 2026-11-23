@@ -17,6 +17,7 @@ from security import current_user, csrf_check, fail, rate_limit, audit
 
 router = APIRouter(prefix='/api/v1/beacon')
 LEASE_SECONDS = 12 * 3600
+ANDROID_LEASE_SECONDS = 300  # Fresh BLE observations renew every minute; fail closed when scanning stops.
 EXIT_GRACE_SECONDS = 120
 DEVICE_SECONDS = 30 * 86400
 
@@ -32,6 +33,7 @@ def configuration():
             'configured': configured, 'roomId': 'sai-room', 'protocol': 'ibeacon',
             'uuid': uuid, 'major': major, 'minor': minor,
             'exitGraceSeconds': EXIT_GRACE_SECONDS, 'maxPresenceSeconds': LEASE_SECONDS,
+            'androidMaxPresenceSeconds': ANDROID_LEASE_SECONDS,
             'requiresNativeApp': True}
 
 
@@ -123,12 +125,13 @@ def region_event(data: RegionEvent, request: Request):
             return {'accepted': False, 'reason': 'manual_override', 'retryAfter': device['suppressed_until']-stamp}
         present = conn.execute('SELECT * FROM presence WHERE user_id=? AND expires_at>?', (user_id,stamp)).fetchone()
         if data.state == 'inside':
+            lease = ANDROID_LEASE_SECONDS if device['platform'] == 'android' else LEASE_SECONDS
             # A manual check-in keeps its own lifetime until the user checks out.
             if not present or device['owns_presence']:
                 if present:
-                    conn.execute('UPDATE presence SET expires_at=? WHERE user_id=?', (stamp+LEASE_SECONDS,user_id))
+                    conn.execute('UPDATE presence SET expires_at=? WHERE user_id=?', (stamp+lease,user_id))
                 else:
-                    conn.execute('INSERT INTO presence VALUES (?,?,?) ON CONFLICT(user_id) DO UPDATE SET checked_in_at=excluded.checked_in_at,expires_at=excluded.expires_at', (user_id,stamp,stamp+LEASE_SECONDS))
+                    conn.execute('INSERT INTO presence VALUES (?,?,?) ON CONFLICT(user_id) DO UPDATE SET checked_in_at=excluded.checked_in_at,expires_at=excluded.expires_at', (user_id,stamp,stamp+lease))
                 conn.execute('UPDATE beacon_devices SET owns_presence=1 WHERE user_id=?', (user_id,))
                 if not present: conn.execute('UPDATE room_state SET sequence=sequence+1 WHERE id=1')
         elif present and device['owns_presence']:
@@ -141,3 +144,21 @@ def region_event(data: RegionEvent, request: Request):
 def manual_override(conn, user_id, leaving=False):
     conn.execute('UPDATE beacon_devices SET owns_presence=0,suppressed_until=? WHERE user_id=?',
                  (int(time.time())+300 if leaving else 0,user_id))
+
+
+@router.delete('/connection', status_code=204)
+def revoke_native_connection(request: Request):
+    """The native stop notification can revoke only its own scoped credential."""
+    authorization = request.headers.get('authorization', '')
+    if not authorization.startswith('Bearer ') or not 40 <= len(authorization[7:]) <= 128:
+        fail(401, 'DEVICE_AUTH_REQUIRED')
+    digest = token_hash(authorization[7:])
+    with get_connection() as conn:
+        conn.execute('BEGIN IMMEDIATE')
+        device = conn.execute('SELECT * FROM beacon_devices WHERE token_hash=?', (digest,)).fetchone()
+        if not device: return
+        if device['owns_presence']:
+            conn.execute('DELETE FROM presence WHERE user_id=?', (device['user_id'],))
+            conn.execute('UPDATE room_state SET sequence=sequence+1 WHERE id=1')
+        conn.execute('DELETE FROM beacon_devices WHERE token_hash=?', (digest,))
+        audit(conn, device['user_id'], 'beacon.native_revoked')

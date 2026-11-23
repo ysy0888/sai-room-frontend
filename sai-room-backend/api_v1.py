@@ -14,6 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from PIL import Image, UnidentifiedImageError
 from database import get_connection
 from beacon import manual_override
+from community_policy import visible, check_content, POLICY_VERSION
 from auth import hash_password, verify_password, token_hash
 from security import (COOKIE, DUMMY_HASH, audit, csrf_check, current_user, fail,
                       issue_session, normalize_email, rate_limit, session)
@@ -99,16 +100,16 @@ def booking_json(row,user):
     return {**{k:row[k] for k in ('id','date','start','end','purpose','name','people')},'owner':'me' if row['owner']==user['id'] else 'other'}
 
 def comment_json(row,user):
-    return {'id':row['id'],'body':row['body'],'createdAt':row['created_at'],'owner':'admin' if row['is_staff'] else 'me' if row['author_id']==user['id'] else 'other'}
+    return {'id':row['id'],'body':row['body'],'createdAt':row['created_at'],'isSelf':row['author_id']==user['id'],'owner':'admin' if row['is_staff'] else 'me' if row['author_id']==user['id'] else 'other'}
 
 def allowed_post(conn,post_id,user):
     row=conn.execute('SELECT * FROM posts WHERE id=?',(post_id,)).fetchone()
-    if not row or (row['kind']=='inquiry' and row['author_id']!=user['id'] and user['role'] not in STAFF): fail(404,'NOT_FOUND')
+    if not row or not visible(conn,row,user): fail(404,'NOT_FOUND')
     return row
 
 def post_json(conn,row,user):
     comments=conn.execute('SELECT * FROM comments WHERE post_id=? ORDER BY created_at,rowid',(row['id'],)).fetchall()
-    result={**{k:row[k] for k in ('id','kind','category','title','body','status')},'owner':'me' if row['author_id']==user['id'] else 'other','createdAt':row['created_at'],'comments':[comment_json(c,user) for c in comments]}
+    result={**{k:row[k] for k in ('id','kind','category','title','body','status')},'owner':'me' if row['author_id']==user['id'] else 'other','createdAt':row['created_at'],'comments':[comment_json(c,user) for c in comments if row['kind']=='inquiry' or visible(conn,c,user,'comment')]}
     if row['kind']=='inquiry':
         author=conn.execute('SELECT name FROM users WHERE id=?',(row['author_id'],)).fetchone()
         result['authorName']=author['name'] if author else '회원'
@@ -170,7 +171,7 @@ def bootstrap(request:Request,roomId:str='sai-room'):
         bookings=conn.execute('SELECT * FROM reservations ORDER BY date,start').fetchall() if approved else []
         posts=conn.execute("SELECT * FROM posts WHERE kind='public' OR author_id=? OR ? IN ('operator','admin') ORDER BY created_at DESC,rowid DESC",(user['id'],user['role'])).fetchall() if approved else []
         present=approved and bool(conn.execute('SELECT 1 FROM presence WHERE user_id=? AND expires_at>?',(user['id'],int(time.time()))).fetchone())
-        return {'user':public_user(user),'csrfToken':session(request)['csrf'],'bookings':[booking_json(b,user) for b in bookings],'posts':[post_json(conn,p,user) for p in posts],'preferences':{'theme':user['theme'],'gauge':user['gauge']},'ball':ball_style(user),'checkedIn':present}
+        return {'user':public_user(user),'csrfToken':session(request)['csrf'],'bookings':[booking_json(b,user) for b in bookings],'posts':[post_json(conn,p,user) for p in posts if visible(conn,p,user)],'communityPolicy':POLICY_VERSION,'communityAccepted':bool(conn.execute('SELECT 1 FROM policy_acceptance WHERE user_id=? AND version=?',(user['id'],POLICY_VERSION)).fetchone()),'preferences':{'theme':user['theme'],'gauge':user['gauge']},'ball':ball_style(user),'checkedIn':present}
 
 @router.get('/admin/membership-applications')
 def applications(request:Request):
@@ -244,6 +245,7 @@ def save_post(data,request,post_id=None):
     categories={'public':('자유','스터디','공용물품'),'inquiry':('문의','건의')}
     if data.category not in categories.get(data.kind,()) or not data.title.strip() or not data.body.strip(): fail(422,'INVALID_POST')
     def action(conn):
+        if data.kind=='public': check_content(conn,user,data.title,data.body)
         if post_id:
             row=allowed_post(conn,post_id,user)
             if row['author_id']!=user['id']: fail(404,'NOT_FOUND')
@@ -274,6 +276,7 @@ def add_comment(post_id,data,request,reply=False):
     if not data.body.strip(): fail(422,'INVALID_COMMENT')
     def action(conn):
         row=allowed_post(conn,post_id,user)
+        if row['kind']=='public': check_content(conn,user,data.body)
         if reply and row['kind']!='inquiry': fail(422,'INVALID_REPLY')
         if not reply and row['kind']=='inquiry' and row['author_id']!=user['id']: fail(403,'FORBIDDEN')
         identifier=str(uuid4())

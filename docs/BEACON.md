@@ -77,3 +77,8 @@ SAI_BEACON_MINOR=<0..65535>
 iPhone/Android 각각 잠금·백그라운드·재부팅·강제 종료·권한 변경·절전·오프라인 복구·장시간 체류를 시험합니다. 출입구와 복도에서 오인식률/반영 지연을 측정하고, 자동 감지 동의와 해제가 작동하는지 확인한 후 기능을 켭니다. 이 저장소의 서버 모의 이벤트 검사는 실제 BLE 수신 테스트를 대체하지 않습니다.
 
 공식 자료: [Apple iBeacon 감지](https://developer.apple.com/documentation/corelocation/determining-the-proximity-to-an-ibeacon-device), [Android 백그라운드 BLE](https://developer.android.com/develop/connectivity/bluetooth/ble/background).
+
+
+## Flutter native implementation (2026-11-23)
+
+The production mobile client lives in `mobile_flutter`. iOS uses Core Location region monitoring and background URLSession; Android uses a filtered native BLE foreground service. No Dart timer maintains background presence. Android fresh observations renew a five-minute lease; iOS region events keep the existing twelve-hour maximum lease. DELETE `/api/v1/beacon/connection` accepts only the scoped bearer credential to stop its own presence from a native notification. See MOBILE-RELEASE.md for permission, offline and field-test limits.

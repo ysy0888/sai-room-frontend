@@ -82,3 +82,8 @@ npm run test:browser
 ## 무료 호스팅
 
 현재 배포 설정은 Vercel 서울 + Supabase Free 서울 PostgreSQL입니다. 함수가 종료되거나 재배포되어도 데이터는 외부 DB에 남습니다. 초기 접속 지연과 무료 사용량 제한이 있으며, [배포 절차](docs/DEPLOY.md)를 따릅니다. PostgreSQL 접속 비밀 값은 서버에만 보관합니다.
+
+
+## iOS · Android
+
+`mobile_flutter/` contains the native Flutter client and platform background-beacon adapters. The existing web application is kept independently deployable. See [mobile setup](mobile_flutter/README.md) and [release readiness](docs/MOBILE-RELEASE.md).

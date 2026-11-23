@@ -84,6 +84,8 @@ async def validation_error(request,error):
 
 app.include_router(router)
 app.include_router(beacon_router)
+from safety import router as safety_router
+app.include_router(safety_router)
 
 @app.get('/healthz')
 def health():

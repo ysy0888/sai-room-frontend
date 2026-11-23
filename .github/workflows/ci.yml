@@ -1,7 +1,7 @@
 name: Verify SAI ROOM
 on:
   push:
-    branches: [feature/auth-frontend]
+    branches: [feature/auth-frontend, feature/mobile-release]
   pull_request:
 permissions:
   contents: read
@@ -40,6 +40,7 @@ jobs:
       - run: npm ci
       - run: pip install -r sai-room-backend/requirements-dev.lock
       - run: npm run build
+      - run: python3 scripts/mobile-scene.py --check
       - run: npm run typecheck
       - run: npm test
       - run: npm run test:server
