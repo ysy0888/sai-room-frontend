@@ -1,6 +1,6 @@
 {
   "name": "sai-room-frontend",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "private": true,
   "description": "SAI ROOM production frontend and authenticated FastAPI service",
   "scripts": {
@@ -10,18 +10,25 @@
     "test": "node --test tests/*.test.*",
     "build:scene": "esbuild src/scene/bottle-3d.js --bundle --format=iife --target=es2020 --minify --legal-comments=linked --outfile=js/bottle-3d.js",
     "test:server": "python3 -m pytest -q sai-room-backend/tests",
-    "test:browser": "python3 tests/run-production.py"
+    "test:browser": "python3 tests/run-production.py",
+    "mobile:sync": "cap sync",
+    "mobile:android": "cap open android",
+    "mobile:ios": "cap open ios"
   },
   "engines": {
     "node": ">=24"
   },
   "devDependencies": {
+    "@capacitor/cli": "8.6.2",
     "esbuild": "0.25.12",
     "playwright": "1.62.1",
     "typescript": "5.9.3"
   },
   "type": "module",
   "dependencies": {
+    "@capacitor/android": "8.6.2",
+    "@capacitor/core": "8.6.2",
+    "@capacitor/ios": "8.6.2",
     "three": "0.180.0"
   }
 }

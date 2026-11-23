@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SAI ROOM</string>
+    <string name="title_activity_main">SAI ROOM</string>
+    <string name="package_name">kr.ac.sejong.sai.room</string>
+    <string name="custom_url_scheme">kr.ac.sejong.sai.room</string>
+</resources>
