@@ -1,6 +1,6 @@
 # SAI ROOM
 
-동아리방 현황·예약·게시판·운영진 문의를 제공하는 웹 앱입니다. 체험 계정과 인원 테스트 없이, 동일 출처의 FastAPI 서버와 SQLite에 연결합니다. 프론트 화면만 열거나 Live Server로 실행하면 API를 사용할 수 없습니다.
+동아리방 현황·예약·게시판·운영진 문의를 제공하는 웹 앱입니다. 체험 계정과 인원 테스트 없이, 동일 출처의 FastAPI 서버에 연결합니다. 로컬은 SQLite, 무료 운영 배포는 Supabase PostgreSQL을 사용합니다. 프론트 화면만 열거나 Live Server로 실행하면 API를 사용할 수 없습니다.
 
 ## 실행
 
@@ -21,7 +21,7 @@ http://127.0.0.1:5317 에서 사용합니다. Node가 있으면 마지막 서버
 
 ## 운영진 코드
 
-- 최초 실행 시 안전한 임의 코드를 한 번 생성합니다. 코드 원문은 서버의 `sai.db.initial-operator-code` 파일에만 저장하며 파일 권한은 600입니다. DB 경로를 바꿨다면 같은 경로 뒤에 `.initial-operator-code`가 붙습니다.
+- 로컬 SQLite 최초 실행 시 안전한 임의 코드를 한 번 생성합니다. 코드 원문은 서버의 `sai.db.initial-operator-code` 파일에만 저장하며 파일 권한은 600입니다. DB 경로를 바꿨다면 같은 경로 뒤에 `.initial-operator-code`가 붙습니다.
 - 사전에 지정한 코드를 사용하려면 서버 환경변수 `SAI_INITIAL_OPERATOR_CODE`를 설정합니다. 최초 설정에만 적용되며, 재시작해도 앱에서 변경한 코드를 덮어쓰지 않습니다.
 - 회원가입에서 코드를 생략하면 멤버, 유효한 코드를 입력하면 운영진으로 **신청**합니다. 두 경우 모두 관리자 승인 전에는 앱을 사용할 수 없습니다.
 - 승인된 운영진·관리자는 **설정 → 동아리 운영 → 운영진 가입 코드**에서 본인 비밀번호를 확인하고 코드를 변경합니다. 새 코드는 12–128자입니다. 기존 코드는 즉시 무효화되며 이미 가입한 사람의 권한은 바뀌지 않습니다.
@@ -36,11 +36,11 @@ SAI 로고 시작 화면, 쿠키 세션 로그인, 가입 승인·거절, 역할
 
 ## 운영 서버 배포
 
-Render 배포는 루트의 `render.yaml`을 사용합니다. 싱가포르의 유료 Web Service와 1GB 영구 디스크에 프론트와 API를 함께 배포합니다. 단계별 절차는 [배포 안내](docs/DEPLOY.md)를 참고하세요.
+Render 배포는 루트의 `render.yaml`을 사용합니다. 싱가포르의 Free Web Service에 프론트와 API를 함께 배포하고, 데이터는 별도 Supabase Free PostgreSQL에 보관합니다. 영구 디스크는 생성하지 않습니다. 단계별 절차는 [배포 안내](docs/DEPLOY.md)를 참고하세요.
 
-다른 서버에서는 `SAI_ENV=production`, `SAI_PUBLIC_ORIGIN=https://실제-도메인`, 영구 디스크의 `SAI_DB_PATH`를 설정하고 HTTPS 역방향 프록시 뒤에서 실행하세요. Render에서는 `SAI_PUBLIC_ORIGIN`을 생략하면 플랫폼의 `RENDER_EXTERNAL_URL`을 사용합니다. 프론트와 `/api/v1`, `/media`는 같은 출처를 사용해야 합니다. `.env.example`은 예시이며 자동으로 읽지 않습니다. 배포 시스템에서 환경변수를 주입하세요.
+다른 서버에서는 `SAI_ENV=production`, `SAI_PUBLIC_ORIGIN=https://실제-도메인`, `SAI_DATABASE_URL`을 설정하고 HTTPS 역방향 프록시 뒤에서 실행하세요. 로컬 SQLite 운영 시에는 영구 디스크의 `SAI_DB_PATH`가 필요합니다. Render에서는 `SAI_PUBLIC_ORIGIN`을 생략하면 플랫폼의 `RENDER_EXTERNAL_URL`을 사용합니다. 프론트와 `/api/v1`, `/media`는 같은 출처를 사용해야 합니다. `.env.example`은 예시이며 자동으로 읽지 않습니다. 배포 시스템에서 환경변수를 주입하세요.
 
-SQLite는 영속 디스크에 보관합니다(`SAI_DB_PATH`로 변경 가능). 이 구현은 단일 동아리·단일 서버 인스턴스 기준입니다. 다중 인스턴스 운영에는 공유 DB와 트랜잭션·제한 정책 이관이 필요합니다. 코드에 서버 주소·비밀 코드·DB를 넣거나 GitHub에 업로드하지 마세요.
+PostgreSQL에서는 서버 전용 역할과 비공개 스키마를 사용하고, 예약·입퇴실 등 다단계 쓰기를 트랜잭션 잠금으로 보호합니다. DB 연결 비밀 값·운영진 코드·사용자 DB는 GitHub나 프론트 파일에 넣지 마세요.
 
 인증은 HttpOnly/SameSite 쿠키, 서버 CSRF 검사, 로그인 세션 교체, 서버 승인·역할·소유권 검사와 요청 제한을 사용합니다. 운영 환경에서는 Secure 쿠키가 적용됩니다. 기존 무인증 `/reservations`, `/posts` 및 Bearer `/auth/*` 경로는 등록하지 않습니다. 새 프론트는 `/api/v1/*`만 사용합니다.
 
@@ -65,6 +65,7 @@ npm run test:browser
 - 서버 검사 13개: 가입 역할, 승인 경계, 코드 변경·이전 코드 무효화, CSRF·세션, 요청 제한, 문의 격리, 예약 소유권·충돌·멱등성, 익명 공, 마이그레이션, 초기 코드 유지
 - 프론트 단위 검사 29개, Chromium 실제 서버 연동 검사 48개(주간 날짜·예약 시간 변경·기존 공 유지 포함)
 - 배포 검사: 운영 쿠키·도메인 제한·상태 확인·일별 SQLite 백업
+- PostgreSQL 검사: 제한된 앱 역할로 전체 API 실행, 동시 쓰기 직렬화, 스키마 변경 차단·RLS·공개 권한 검사
 - 빌드·타입 검사 통과
 
 [API](docs/API.md) · [인증과 코드 운영](docs/AUTH.md) · [화면 흐름](docs/FLOW.md)

@@ -39,6 +39,6 @@ Render 무료 서버는 약 15분간 접속이 없으면 잠들며, 다음 접�
 
 ## 검증
 
-GitHub CI는 프론트 빌드·타입·단위 검사, SQLite API, PostgreSQL API와 동시 쓰기, 브라우저 기능 검사를 수행한다. PostgreSQL 테스트 데이터베이스는 localhost의 `sai_test`만 초기화할 수 있도록 제한한다.
+GitHub CI는 프론트 빌드·타입·단위 검사, SQLite API, 제한된 앱 역할의 PostgreSQL API·동시 쓰기·스키마 권한, 브라우저 기능 검사를 수행한다. PostgreSQL 테스트 데이터베이스는 localhost의 `sai_test`만 초기화할 수 있도록 제한한다.
 
 공식 문서: https://render.com/docs/free · https://supabase.com/docs/guides/database/connecting-to-postgres
