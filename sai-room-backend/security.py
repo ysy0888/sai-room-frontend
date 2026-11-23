@@ -56,7 +56,7 @@ def rate_limit(scope, subject, limit, seconds=900):
     window = int(time.time()) // seconds
     with get_connection() as conn:
         conn.execute('BEGIN IMMEDIATE')
-        conn.execute('INSERT INTO rate_limits VALUES (?,?,1) ON CONFLICT(key) DO UPDATE SET attempts=CASE WHEN window=excluded.window THEN attempts+1 ELSE 1 END,window=excluded.window', (key,window))
+        conn.execute('INSERT INTO rate_limits VALUES (?,?,1) ON CONFLICT(key) DO UPDATE SET attempts=CASE WHEN rate_limits.window=excluded.window THEN rate_limits.attempts+1 ELSE 1 END,window=excluded.window', (key,window))
         attempts = conn.execute('SELECT attempts FROM rate_limits WHERE key=?', (key,)).fetchone()[0]
         conn.execute('DELETE FROM rate_limits WHERE window<?', (window-2,))
     if attempts > limit:
