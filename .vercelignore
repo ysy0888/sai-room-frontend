@@ -15,3 +15,6 @@ artifacts
 tests
 sai-room-backend/tests
 docs
+
+# Native builds are published through Apple/Google, never bundled into the web service.
+mobile_flutter
