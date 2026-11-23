@@ -68,6 +68,13 @@ CREATE TABLE IF NOT EXISTS ball_images (
 CREATE TABLE IF NOT EXISTS presence (
   user_id TEXT PRIMARY KEY REFERENCES users(id), checked_in_at BIGINT NOT NULL, expires_at BIGINT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS beacon_devices (
+  user_id TEXT PRIMARY KEY REFERENCES users(id), token_hash TEXT NOT NULL UNIQUE,
+  platform TEXT NOT NULL CHECK(platform IN ('ios','android')), created_at BIGINT NOT NULL,
+  expires_at BIGINT NOT NULL, last_observed_at BIGINT NOT NULL DEFAULT 0,
+  last_event_id TEXT NOT NULL DEFAULT '', suppressed_until BIGINT NOT NULL DEFAULT 0,
+  owns_presence INTEGER NOT NULL DEFAULT 0 CHECK(owns_presence IN (0,1))
+);
 CREATE TABLE IF NOT EXISTS room_state (
   id INTEGER PRIMARY KEY CHECK(id=1), sequence BIGINT NOT NULL DEFAULT 0
 );

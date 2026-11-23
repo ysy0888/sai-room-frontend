@@ -8,9 +8,10 @@ const{chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');let checks=
  const login=async(p,email,password='Browser-test-1234')=>{await p.waitForSelector('#login-form');await p.fill('#login-email',email);await p.fill('#login-password',password);await p.locator('#login-form [type=submit]').click();await p.waitForFunction(()=>!document.querySelector('#login-form'));};
  const logout=async p=>{if(await p.evaluate(()=>SaiAuth.signedIn))await go(p,'settings');await p.locator('[data-action=logout]').click();await p.waitForSelector('#login-form');};
  const fillSignup=async(p,email)=>{await p.fill('#signup-displayName','신규 운영진');await p.fill('#signup-studentId',email.startsWith('new')?'20269901':'20269902');await p.fill('#signup-email',email);await p.fill('#signup-password','12345678');await p.fill('#signup-confirm','12345678');await p.locator('.auth-operator summary').click();};
- await page.route('**/api/v1/bootstrap*',async route=>{await new Promise(r=>setTimeout(r,350));await route.continue();});
+ let resumeBootstrap;const bootstrapGate=new Promise(resolve=>{resumeBootstrap=resolve;});
+ await page.route('**/api/v1/bootstrap*',async route=>{await bootstrapGate;await route.continue();});
  await page.goto(base+'/#home',{waitUntil:'domcontentloaded'});await page.waitForSelector('.launch-screen');await page.screenshot({path:path.join(output,'launch-v10.png')});ok(await page.locator('.launch-mark img').getAttribute('src')==='assets/sai-logo.png','startup uses the original SAI logo');
- await page.waitForSelector('#login-form');await page.unroute('**/api/v1/bootstrap*');ok(await page.locator('.auth-demo,.motion-lab,[data-demo-count]').count()===0,'production entry has no demo accounts or population test controls');
+ resumeBootstrap();await page.waitForSelector('#login-form');await page.unroute('**/api/v1/bootstrap*');ok(await page.locator('.auth-demo,.motion-lab,[data-demo-count]').count()===0,'production entry has no demo accounts or population test controls');
  await page.screenshot({path:path.join(output,'login-v10.png')});await login(page,'operator@example.test');await page.waitForSelector('.check-in-row');ok(await page.locator('.occupancy-test').count()===0,'authenticated home also has no population simulator');
  await go(page,'settings');await page.waitForSelector('[data-route=operator-code]');ok(await page.locator('[data-route=members]').count()===0,'operator gets code settings but not admin approval menu');
  await page.locator('[data-route=operator-code]').click();await page.waitForSelector('#operator-code-form');await page.screenshot({path:path.join(output,'operator-code-v10.png')});
@@ -42,18 +43,43 @@ const{chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');let checks=
  await logout(page);await login(page,'member@example.test');await go(page,'settings');await page.waitForSelector('.profile-card');ok(await page.locator('[data-route=operator-code]').count()===0,'member settings do not expose invitation code controls');await go(page,'operator-code');await page.waitForSelector('.inquiry-empty');ok(await page.locator('#operator-code-form').count()===0,'direct route does not reveal staff settings');
  await go(page,'messages');await page.waitForSelector('.inquiry-list');await page.locator('[data-action=compose]').click();await page.fill('#post-title','실제 문의 저장');await page.fill('#post-body','운영진에게 문의합니다.');await page.locator('#post-form [type=submit]').click();await page.waitForSelector('.inquiry-thread');ok((await page.locator('.thread-original').innerText()).includes('운영진에게'),'member inquiry is saved through the real server');
  await go(admin,'inbox');await admin.locator('[data-action=refresh-data]').click();await admin.waitForSelector('.inquiry-item');await admin.locator('.inquiry-item').click();await admin.fill('#comment-body','확인했습니다.');await admin.locator('#comment-form [type=submit]').click();await admin.waitForSelector('.staff-message');await page.reload();await page.waitForSelector('.staff-message');ok((await page.locator('.staff-message').innerText()).includes('확인했습니다'),'staff reply persists and reaches the author');
- await go(page,'reservations');await page.waitForSelector('.timetable');const previousWeekDate=await page.inputValue('#calendar-date');await page.locator('[data-action=date-next]').click();const reservationTestDate=await page.inputValue('#calendar-date');
+ // Exercise browser-native composition, including a presence refresh while editing.
+ await go(page,'board');await page.locator('[data-action=compose]').click();await page.fill('#post-body','한글 조합 저장 확인');
+ const ime=await context.newCDPSession(page);await page.locator('#post-title').focus();const editor=await page.$('#post-title');
+ for(const syllable of [['ㅎ','하','한'],['ㄱ','그','글']]){
+   for(const preedit of syllable)await ime.send('Input.imeSetComposition',{text:preedit,selectionStart:preedit.length,selectionEnd:preedit.length});
+   await page.evaluate(()=>document.querySelector('#post-form').requestSubmit());
+   ok(await page.locator('#post-form').count()===1,'composition confirmation does not submit an unfinished post');
+   await page.evaluate(()=>SaiPresence.refresh());
+   ok(await editor.evaluate(el=>el.isConnected&&document.activeElement===el),'presence polling preserves the Korean composition editor');
+   await ime.send('Input.insertText',{text:syllable.at(-1)});
+ }
+ await ime.send('Input.insertText',{text:' 제목'});ok(await page.inputValue('#post-title')==='한글 제목','native IME composition commits intact Korean syllables');
+ await page.locator('#post-form [type=submit]').click();await page.waitForSelector('.detail-title');await page.reload();await page.waitForSelector('.detail-title');
+ ok(await page.locator('.detail-title').innerText()==='한글 제목','Korean title persists through the real API and reload');
+ await go(page,'beacon');await page.waitForSelector('.beacon-state');ok((await page.locator('.beacon-settings').innerText()).includes('현재 웹 화면에서는 자동 감지가 동작하지 않습니다.'),'beacon screen states the web limitation and does not pretend to scan');
+ ok((await page.locator('.beacon-state').innerText()).includes('설치 준비 중')&&await page.locator('[data-action=disconnect-beacon]').count()===0,'unconfigured beacon integration remains off');
+ await go(page,'reservations');await page.waitForSelector('.timetable');const previousWeekDate=await page.inputValue('#calendar-date');await page.locator('[data-action=date-next]').click();let reservationTestDate=await page.inputValue('#calendar-date');
  ok((new Date(reservationTestDate)-new Date(previousWeekDate))/86400000===7,'week arrow advances the selected date by exactly seven days');
  ok(await page.locator('.week-strip .day-heading').count()===7,'all seven weekdays are available in the same selector');
- await page.locator('[data-action=slot]').filter({visible:true}).first().click();
+ ok(await page.locator('.week-timetable').count()===1,'complete weekly timetable is the default view');
+ const range=await page.locator('.week-timetable .time-label').allTextContents();ok(range[0]==='09:00'&&range.at(-1)==='23:00','weekly view includes the whole opening day');
+ await page.locator('[data-action=slot]').filter({visible:true}).first().click();reservationTestDate=await page.inputValue('#calendar-date');
+ ok(await page.locator('.week-strip [aria-pressed=true]').getAttribute('data-date')===reservationTestDate,'tapping the weekly grid selects its actual day');
  await page.selectOption('#selection-start','840');await page.selectOption('#selection-end','960');
- ok((await page.locator('.selection-block').innerText()).includes('14:00–16:00')&&(await page.locator('#selection-duration').innerText()).includes('2시간'),'calendar time controls resize the selected interval to two hours');
+ ok((await page.locator('.selection-block').getAttribute('aria-label')).includes('14:00–16:00')&&(await page.locator('#selection-duration').innerText()).includes('2시간'),'calendar time controls resize the selected interval to two hours');
  // Exercise the full booking form using the app's available slot action.
  await page.locator('#action-dock [data-action=go]').click();await page.waitForSelector('#booking-form');await page.locator('#booking-form [name=purpose]').fill('실제 예약');await page.locator('#booking-form [name=name]').fill('회원');await page.locator('#booking-form [type=submit]').click();await page.waitForSelector('.booking-block');ok((await page.locator('.booking-block').allTextContents()).join(' ').includes('실제 예약'),'booking form saves to the authenticated server');
  await page.locator('.booking-block.mine').click();await page.locator('[data-route^="reservation/edit/"]').click();await page.waitForSelector('#booking-form');
  await page.selectOption('#booking-start','990');ok(await page.inputValue('#booking-end')==='1020','moving the start beyond the end advances the end to a valid time');
  await page.selectOption('#booking-end','1080');await page.locator('#booking-form [type=submit]').click();await page.waitForSelector('.booking-block.mine');await page.reload();await page.waitForSelector('.timetable');await page.locator('#calendar-date').fill(reservationTestDate);await page.waitForSelector('.booking-block.mine');
- ok((await page.locator('.booking-block.mine').innerText()).includes('16:30–18:00'),'edited reservation time persists after reload from the real backend');
+ ok((await page.locator('.booking-block.mine').getAttribute('aria-label')).includes('16:30–18:00'),'edited reservation time persists after reload from the real backend');
+ ok((await page.locator('.agenda-item.mine').innerText()).includes('16:30')&&(await page.locator('.agenda-item.mine').innerText()).includes('실제 예약'),'selected-day agenda exposes booking times and purpose');
+ await page.screenshot({path:path.join(output,'weekly-schedule.png')});
+ await page.locator('[data-action=schedule-view][data-value=day]').click();await page.waitForSelector('.day-timetable');
+ await page.waitForFunction(()=>document.querySelector('.day-timetable').scrollTop>0);
+ ok((await page.locator('.booking-block.mine').innerText()).includes('16:30–18:00'),'daily view expands booking details and scrolls to the selected time');
+ await page.locator('[data-action=schedule-view][data-value=week]').click();
  await page.selectOption('#selection-start','1020');await page.selectOption('#selection-end','1080');
  ok(await page.locator('.booking-submit').isDisabled()&&(await page.locator('.time-selection-error').innerText()).includes('겹칩니다'),'conflicting time selection stays visible and prevents booking');
  await page.selectOption('#selection-start','1350');ok(await page.inputValue('#selection-end')==='1380','latest start clamps the end to the 23:00 closing time');
@@ -61,6 +87,6 @@ const{chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');let checks=
  for(const route of ['reservations','board','messages','settings']){await go(page,route);ok(await page.locator('#header h1').evaluate(el=>el.getBoundingClientRect().width<=1&&getComputedStyle(el).position==='absolute'),'top title is visually removed on '+route);}
  await logout(page);await go(page,'signup');await page.waitForSelector('#signup-form');await page.locator('.auth-operator summary').click();for(const width of[320,390,500]){await page.setViewportSize({width,height:740});ok(await page.locator('#view').evaluate(e=>e.scrollWidth<=e.clientWidth+1),`signup stays within ${width}px`);await page.locator('#signup-form [type=submit]').scrollIntoViewIfNeeded();ok(await page.locator('#signup-form [type=submit]').isVisible(),`signup button remains reachable at ${width}px`);}
  ok(errors.length===0,'real backend flows have no browser runtime errors');
- fs.writeFileSync(path.join(output,'production-results.json'),JSON.stringify({revision:12,checks,errors,server:'real FastAPI + isolated SQLite',liveDeployment:false},null,2));console.log('TOTAL',checks);
+ fs.writeFileSync(path.join(output,'production-results.json'),JSON.stringify({revision:13,checks,errors,server:'real FastAPI + isolated SQLite',liveDeployment:false},null,2));console.log('TOTAL',checks);
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exit(1)});

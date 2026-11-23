@@ -74,6 +74,8 @@
     async decide(id,membershipStatus){if(user?.role!=='admin'||user.membershipStatus!=='approved'||!['approved','rejected'].includes(membershipStatus))throw new ApiError('관리자 권한을 확인해주세요.',403);await request('/admin/membership-applications/'+encodeURIComponent(id),{method:'PATCH',body:{membershipStatus}});},
     async operatorCode(){if(!['operator','admin'].includes(user?.role)||user.membershipStatus!=='approved')throw new ApiError('운영진만 변경할 수 있습니다.',403);return codeMetadata(await request('/staff/operator-code'));},
     async rotateOperatorCode({newCode,currentPassword,version}){if(!['operator','admin'].includes(user?.role)||user.membershipStatus!=='approved')throw new ApiError('운영진만 변경할 수 있습니다.',403);return codeMetadata(await request('/staff/operator-code',{method:'PUT',body:{newCode,currentPassword,version}}));},
+    async beaconConfig(){const value=await request('/beacon/config');if(!value||typeof value.enabled!=='boolean'||typeof value.paired!=='boolean')throw new ApiError('연결 상태를 확인하지 못했습니다.',502,'INVALID_RESPONSE');return value;},
+    async disconnectBeacon(){return request('/beacon/devices',{method:'DELETE'});},
     async setPresence(checkedIn){const data=await request('/me/presence',{method:checkedIn?'POST':'DELETE'});if(typeof data?.checkedIn!=='boolean')throw new ApiError('입·퇴실 상태를 확인해주세요.',502);return data;},
     async saveBall({anonymous,color,imageId}){return ballStyle(await request('/me/ball',{method:'PATCH',body:{anonymous,color,imageId}}));},
     async uploadBallImage(imageData){const data=await request('/me/ball-image',{method:'POST',body:{imageData}});if(!data||typeof data.imageId!=='string'||!safeImage(data.imageUrl))throw new ApiError('이미지 응답을 확인해주세요.',502);return data;},

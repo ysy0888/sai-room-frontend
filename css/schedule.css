@@ -1,0 +1,30 @@
+/* A complete week, with a readable agenda underneath. */
+body[data-route=reservations] .schedule-view{display:flex;flex-direction:column;gap:12px;height:auto;min-height:100%}
+.schedule-toolbar{display:flex;align-items:center;gap:12px;font-size:11px;color:var(--muted)}
+.schedule-toolbar>.text-button{margin-left:auto;min-height:36px;font-size:12px;padding:0 8px}
+.schedule-switch{display:flex;background:var(--soft);border-radius:8px;padding:3px;gap:2px}
+.schedule-switch button{min-width:52px;min-height:32px;border:0;border-radius:6px;background:none;font-size:12px;color:var(--muted)}
+.schedule-switch button[aria-pressed=true]{background:var(--surface);color:var(--text);font-weight:700;box-shadow:0 1px 3px #14213b12}
+.schedule-view .date-switch{margin:0}.schedule-view .week-strip{margin:0;padding-left:32px;gap:0}
+.schedule-view .week-strip .day-heading{min-height:54px;grid-template-rows:12px 28px 3px;gap:3px;padding:2px 0}
+.schedule-view .day-number{width:28px;height:28px;font-size:14px}.schedule-view .weekday-label{font-size:10px}
+body[data-route=reservations] .schedule-view .week-timetable{flex:none;max-height:none;overflow:visible;padding:6px 0 10px;margin:0}
+.schedule-view .time-grid{margin-left:32px;width:calc(100% - 32px);margin-bottom:0;background-size:calc(100% / var(--columns)) 100%,100% calc(var(--time-step) * 2);border-bottom:1px solid var(--border)}
+.schedule-view .time-label{font-size:9px;left:-32px;width:26px;line-height:1}
+.week-timetable .slot{border-bottom:1px solid color-mix(in srgb,var(--border),transparent 70%);min-height:0}
+.week-timetable .slot:disabled{background:color-mix(in srgb,var(--soft),transparent 40%)}
+.week-timetable .booking-block,.week-timetable .selection-block{border-radius:4px;min-height:0;padding:1px 2px;gap:0;align-items:flex-start;justify-content:flex-start;line-height:1.35;text-align:left}
+.week-timetable .booking-block strong,.week-timetable .booking-block.short strong{font-size:9px;font-weight:500;line-height:1.3;word-break:break-all;overflow:hidden;white-space:normal}
+.week-timetable .selection-block{border:1px dashed var(--accent);background:color-mix(in srgb,var(--rose),transparent 25%)}
+body[data-route=reservations] .schedule-view .day-timetable{flex:none;height:320px;min-height:200px;max-height:45vh;padding-top:8px;margin:0}
+.now-line{position:absolute;height:1px;background:var(--accent);z-index:3;pointer-events:none}.now-line:before{content:'';position:absolute;left:-2px;top:-2px;width:5px;height:5px;border-radius:50%;background:var(--accent)}
+.schedule-view .legend{gap:12px;font-size:10px;margin:0}.legend-current{display:flex;align-items:center;gap:5px}.legend-current i{width:11px;height:1px;background:var(--accent)}
+.day-agenda{margin-top:8px;border-top:1px solid var(--border);padding-top:17px}.agenda-heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}.agenda-heading h2{font-size:13px;margin:0;letter-spacing:-.2px}.agenda-heading>span{font-size:11px;color:var(--muted)}
+.agenda-item{display:flex;align-items:center;gap:13px;width:100%;min-height:70px;padding:13px 0;border:0;border-bottom:1px solid var(--border);background:none;text-align:left;color:var(--text)}
+.agenda-time{display:grid;gap:4px;min-width:42px;font-variant-numeric:tabular-nums}.agenda-time strong{font-size:13px}.agenda-time small{font-size:11px;color:var(--muted)}.agenda-copy{display:grid;gap:5px;min-width:0;border-left:3px solid #b6c6e0;padding-left:12px;flex:1}.mine .agenda-copy{border-color:var(--accent)}.agenda-copy strong{font-size:13px;overflow-wrap:anywhere}.agenda-copy small{font-size:11px;color:var(--muted)}.agenda-item>svg{width:16px;flex-shrink:0;color:var(--muted)}.agenda-empty{font-size:12px;color:var(--muted);line-height:1.8;margin:14px 0 8px}
+.compact-booking-actions{gap:8px}.compact-booking-actions .booking-time-picker{border:0;padding:0;gap:0 6px}.compact-booking-actions .booking-time-fields select{min-height:32px;font-size:15px}.compact-booking-actions .booking-time-picker p{font-size:10px}.compact-booking-actions .time-selection-error{font-size:11px;color:var(--accent);margin:0}
+.booking-submit-row{display:flex;align-items:center;gap:12px}.booking-submit-row .selection-summary{display:grid;gap:3px;flex:1;white-space:nowrap;font-size:11px}.booking-submit-row .selection-summary strong{font-size:15px}.booking-submit-row .booking-submit{min-height:44px;width:auto;min-width:130px;font-size:13px;gap:10px}
+body[data-route=reservations] .action-dock{padding-top:10px;padding-bottom:12px}
+.form-field textarea.post-title-editor{min-height:74px;height:74px;resize:none;line-height:1.55;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans KR","Malgun Gothic",sans-serif;font-size:16px;letter-spacing:normal;text-rendering:auto}
+@media(max-width:360px){.booking-submit-row .booking-submit{min-width:110px}.schedule-switch button{min-width:46px}.schedule-toolbar{gap:8px}.week-timetable .booking-block strong{font-size:8px}}
+.beacon-state{padding:18px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}.beacon-state p{margin:12px 0 0;font-size:13px;line-height:1.8;color:var(--muted)}.beacon-steps{padding-left:20px;margin:16px 0;display:grid;gap:22px}.beacon-steps li{padding-left:7px;color:var(--muted);font-size:12px}.beacon-steps strong{display:block;color:var(--text);font-size:14px;margin-bottom:6px}.beacon-steps span{line-height:1.8}.beacon-settings .inquiry-heading{padding-bottom:8px}

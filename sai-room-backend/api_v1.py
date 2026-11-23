@@ -13,6 +13,7 @@ from fastapi import APIRouter, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 from PIL import Image, UnidentifiedImageError
 from database import get_connection
+from beacon import manual_override
 from auth import hash_password, verify_password, token_hash
 from security import (COOKIE, DUMMY_HASH, audit, csrf_check, current_user, fail,
                       issue_session, normalize_email, rate_limit, session)
@@ -326,14 +327,14 @@ def save_ball(data:Ball,request:Request):
 def check_in(request:Request):
     user=auth_write(request)
     def action(conn):
-        stamp=int(time.time());conn.execute('INSERT INTO presence VALUES (?,?,?) ON CONFLICT(user_id) DO UPDATE SET checked_in_at=excluded.checked_in_at,expires_at=excluded.expires_at',(user['id'],stamp,stamp+4*3600));conn.execute('UPDATE room_state SET sequence=sequence+1 WHERE id=1')
+        manual_override(conn,user['id']);stamp=int(time.time());conn.execute('INSERT INTO presence VALUES (?,?,?) ON CONFLICT(user_id) DO UPDATE SET checked_in_at=excluded.checked_in_at,expires_at=excluded.expires_at',(user['id'],stamp,stamp+4*3600));conn.execute('UPDATE room_state SET sequence=sequence+1 WHERE id=1')
         return {'checkedIn':True}
     return mutation(request,user,{},action)
 @router.delete('/me/presence')
 def check_out(request:Request):
     user=auth_write(request)
     def action(conn):
-        conn.execute('DELETE FROM presence WHERE user_id=?',(user['id'],));conn.execute('UPDATE room_state SET sequence=sequence+1 WHERE id=1');return {'checkedIn':False}
+        manual_override(conn,user['id'],leaving=True);conn.execute('DELETE FROM presence WHERE user_id=?',(user['id'],));conn.execute('UPDATE room_state SET sequence=sequence+1 WHERE id=1');return {'checkedIn':False}
     return mutation(request,user,{},action)
 
 def presence_snapshot(request,room_id,include_members=False):

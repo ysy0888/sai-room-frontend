@@ -14,7 +14,14 @@
     currentRoute = "",
     toastTimer,
     confirmResolver;
-  let selectedTimeEdited = false;
+  let selectedTimeEdited = false, scheduleMode = 'week';
+  let composing = false, compositionEndedAt = -Infinity;
+  document.addEventListener('compositionstart', () => { composing = true; });
+  document.addEventListener('compositionend', () => { composing = false; compositionEndedAt = performance.now(); });
+  document.addEventListener('focusout', () => { composing = false; });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.isComposing || composing || e.keyCode === 229)) e.stopPropagation();
+  }, true);
   let busy = false, bootError = '', sessionExpired = false, authenticated = false, booting = false, authRevision = 0;
   const remote = true;
   let signupEmail='',signupDone=false,applicationFilter='pending',applications=null,applicationsError='',applicationsLoading=false,applicationRevision=0;
@@ -25,6 +32,7 @@
   const admin=()=>approved()&&user()?.role==='admin';
   const inboxRoute=()=>staff()?'inbox':'messages';
   const roleName=()=>({member:'멤버',operator:'운영진',admin:'관리자'}[user()?.role]||'멤버');
+  let beaconInfo=null,beaconError='',beaconLoading=false;
   let codeInfo=null,codeError='',codeLoading=false,codeSuccess=false,checkedIn=false,firstBoot=true;
   let reading = SaiPresence.current();
   function requestError(e, target) { if (target) target.textContent = e.message; else toast(e.message); }
@@ -188,6 +196,7 @@
   }
   function announceAuth(){document.dispatchEvent(new Event('sai:auth-change'));}
   function clearSession(expired=false){
+    beaconInfo=null;beaconError='';beaconLoading=false;composing=false;
     authenticated=false;booting=false;sessionExpired=expired;bootError='';authRevision++;codeInfo=null;codeError='';codeLoading=false;codeSuccess=false;checkedIn=false;applications=null;applicationsError='';applicationsLoading=false;applicationRevision++;draftBall=null;ball={anonymous:false,color:'#233f6d',imageId:null,imageUrl:null};boardKind='public';boardFilter='전체';
     state.bookings=[];state.posts=[];SaiBackend.clear();SaiPresence.stop();SaiDeviceMotion.stop();SaiMotion.unmount();
     for(const dialog of document.querySelectorAll('dialog[open]'))dialog.close();
@@ -238,30 +247,41 @@
     const weekStart=addDay(selectedDate,-((dateObj(selectedDate).getDay()+6)%7));
     const dates=Array.from({length:7},(_,i)=>addDay(weekStart,i));
     const weekdays=['월','화','수','목','금','토','일'];
-    let grid = "";
-    const start = 540,
-      end = 1380,
-      cell = 44;
-    for (let t = start; t < end; t += 30) {
-      const top = ((t - start) / 30) * cell;
-      grid += `<span class="time-label" style="top:${top}px">${time(t)}</span>`;
-      grid += `<button class="slot" style="top:${top}px;left:0;height:${cell}px" data-action="slot" data-date="${selectedDate}" data-start="${t}" aria-label="${fmtDate(selectedDate, false)} ${time(t)} 예약 시간 선택" ${isPastSlot({date:selectedDate,start:t})?'disabled':''}></button>`;
+    const weekly=scheduleMode==='week', cell=weekly?12:40, start=540, end=1380;
+    const visibleDates=weekly?dates:[selectedDate];
+    const weekBookings=state.bookings.filter(b=>dates.includes(b.date));
+    const dayBookings=state.bookings.filter(b=>b.date===selectedDate).sort((a,b)=>a.start-b.start);
+    let grid='';
+    for(let t=start;t<=end;t+=weekly?60:30){
+      grid+=`<span class="time-label" style="top:${((t-start)/30)*cell}px">${time(t)}</span>`;
     }
-    state.bookings
-      .filter((b) => b.date===selectedDate)
-      .forEach((b) => {
-        grid += `<button class="booking-block ${b.owner === "me" ? "mine" : ""} ${b.end - b.start === 30 ? "short" : ""}" style="top:${((b.start - start) / 30) * cell + 2}px;left:3px;height:${((b.end - b.start) / 30) * cell - 4}px" data-action="go" data-route="reservation/${b.id}"><strong>${esc(b.purpose)}: ${esc(b.name)}</strong><span>${b.people}명</span><small>${time(b.start)}–${time(b.end)}</small></button>`;
+    visibleDates.forEach((date,column)=>{
+      const left=column*100/visibleDates.length, width=100/visibleDates.length;
+      for(let t=start;t<end;t+=30){
+        grid+=`<button class="slot" style="top:${((t-start)/30)*cell}px;left:${left}%;width:${width}%;height:${cell}px" data-action="slot" data-date="${date}" data-start="${t}" aria-label="${fmtDate(date,false)} ${time(t)} 예약 시간 선택" ${isPastSlot({date,start:t})?'disabled':''}></button>`;
+      }
+      state.bookings.filter(b=>b.date===date).forEach(b=>{
+        grid+=`<button class="booking-block ${b.owner==='me'?'mine':''} ${b.end-b.start===30?'short':''}" style="top:${((b.start-start)/30)*cell+1}px;left:calc(${left}% + 2px);width:calc(${width}% - 4px);height:${((b.end-b.start)/30)*cell-2}px" data-action="go" data-route="reservation/${b.id}" aria-label="${esc(b.purpose)}, ${fmtDate(date,false)} ${time(b.start)}–${time(b.end)}, ${esc(b.name)}, ${b.people}명" title="${esc(b.purpose)} · ${time(b.start)}–${time(b.end)}"><strong>${esc(b.purpose)}</strong>${weekly?'':`<span>${esc(b.name)} · ${b.people}명</span><small>${time(b.start)}–${time(b.end)}</small>`}</button>`;
       });
-    if (selectedSlot.date===selectedDate && !overlapping(selectedSlot) && !isPastSlot(selectedSlot)) {
-      grid += `<div class="selection-block" style="top:${((selectedSlot.start - start) / 30) * cell + 2}px;left:3px;height:${((selectedSlot.end - selectedSlot.start) / 30) * cell - 4}px"><strong>선택한 시간</strong><span>${time(selectedSlot.start)}–${time(selectedSlot.end)}</span></div>`;
-    }
-    setActions(`<div class="booking-actions"><div class="selection-summary ${selectable?'':'unavailable'}"><span>${fmtDate(selectedSlot.date, false)}</span><strong>${selectable?`${time(selectedSlot.start)}–${time(selectedSlot.end)}`:'시간을 다시 선택해주세요'}</strong></div><button class="primary-button booking-submit" data-action="go" data-route="reservation/new" ${selectable?'':'disabled'}>${selectable?'예약하기':'시간을 다시 선택해주세요'} </button></div>`);
-    return `<div class="stack reservation-view screen-enter">
-      <div class="date-switch"><button class="icon-button" data-action="date-prev" aria-label="이전 주">${icon("back")}</button><label class="date-label">${dateObj(selectedDate).toLocaleDateString('ko-KR',{year:'numeric',month:'long'})}<input type="date" id="calendar-date" value="${selectedDate}" aria-label="예약 날짜 선택"></label><button class="icon-button" data-action="date-next" aria-label="다음 주">${icon("next")}</button></div>
+      if(selectedSlot.date===date&&selectable){
+        grid+=`<div class="selection-block" style="top:${((selectedSlot.start-start)/30)*cell+1}px;left:calc(${left}% + 2px);width:calc(${width}% - 4px);height:${((selectedSlot.end-selectedSlot.start)/30)*cell-2}px" aria-label="선택한 시간 ${time(selectedSlot.start)}–${time(selectedSlot.end)}">${weekly?'<span class="sr-only">': '<strong>선택한 시간</strong><span>'}${time(selectedSlot.start)}–${time(selectedSlot.end)}</span></div>`;
+      }
+      if(date===SaiData.day()){
+        const kst=new Date().toLocaleTimeString('en-GB',{timeZone:'Asia/Seoul',hour12:false,hour:'2-digit',minute:'2-digit'}).split(':').map(Number), minute=kst[0]*60+kst[1];
+        if(minute>=start&&minute<end)grid+=`<div class="now-line" style="top:${((minute-start)/30)*cell}px;left:${left}%;width:${width}%" aria-label="현재 시간 ${time(minute)}"></div>`;
+      }
+    });
+    setActions(`<div class="booking-actions compact-booking-actions"><section class="booking-time-picker" aria-label="예약 시간 조절"><div class="booking-time-fields"><label for="selection-start">시작<select id="selection-start">${timeOptions(selectedSlot.start,false)}</select></label><span aria-hidden="true">–</span><label for="selection-end">종료<select id="selection-end">${timeOptions(selectedSlot.end,true,selectedSlot.start+30)}</select></label></div><p id="selection-duration" aria-live="polite">${durationText(selectedSlot.end-selectedSlot.start)}</p></section>${selectionError?`<p class="time-selection-error" role="status">${selectionError}</p>`:''}<div class="booking-submit-row"><div class="selection-summary"><span>${fmtDate(selectedSlot.date,false)}</span><strong>${time(selectedSlot.start)}–${time(selectedSlot.end)}</strong></div><button class="primary-button booking-submit" data-action="go" data-route="reservation/new" ${selectable?'':'disabled'}>예약하기 ${icon('plus')}</button></div></div>`);
+    return `<div class="reservation-view schedule-view ${weekly?'show-week':'show-day'} screen-enter">
+      <div class="date-switch"><button class="icon-button" data-action="date-prev" aria-label="이전 주">${icon('back')}</button><label class="date-label">${dateObj(selectedDate).toLocaleDateString('ko-KR',{year:'numeric',month:'long'})}<input type="date" id="calendar-date" value="${selectedDate}" aria-label="예약 날짜 선택"></label><button class="icon-button" data-action="date-next" aria-label="다음 주">${icon('next')}</button></div>
+      <div class="schedule-toolbar"><div class="schedule-switch" aria-label="시간표 보기">${[['week','주간'],['day','하루']].map(([v,l])=>`<button data-action="schedule-view" data-value="${v}" aria-pressed="${scheduleMode===v}">${l}</button>`).join('')}</div><span>${weekly?'이번 주':'선택한 날'} <strong>${weekly?weekBookings.length:dayBookings.length}</strong>건</span><button class="text-button" data-action="date-today">오늘</button></div>
       <div class="day-headings week-strip" aria-label="예약 요일 선택">${dates.map((d,i)=>`<button class="day-heading ${selectedDate===d?'active':''} ${d===SaiData.day()?'is-today':''}" data-action="date-select" data-date="${d}" aria-label="${fmtDate(d)}${d===SaiData.day()?', 오늘':''}" aria-pressed="${selectedDate===d}" ${d===SaiData.day()?'aria-current="date"':''}><span class="weekday-label">${weekdays[i]}</span><span class="day-number">${dateObj(d).getDate()}</span><span class="day-mark ${state.bookings.some(b=>b.date===d)?'has-bookings':''}" aria-hidden="true"></span></button>`).join('')}</div>
-      <section class="booking-time-picker" aria-label="예약 시간 조절"><div class="booking-time-fields"><label for="selection-start">시작<select id="selection-start">${timeOptions(selectedSlot.start,false)}</select></label><span aria-hidden="true">–</span><label for="selection-end">종료<select id="selection-end">${timeOptions(selectedSlot.end,true,selectedSlot.start+30)}</select></label></div><p id="selection-duration" aria-live="polite">${durationText(selectedSlot.end-selectedSlot.start)}</p>${selectionError?`<p class="time-selection-error" role="status">${selectionError}</p>`:''}</section>
-      <div class="timetable day-timetable" aria-label="${fmtDate(selectedDate)} 예약 시간표"><div class="time-grid" style="height:${((end-start)/30)*cell}px">${grid}<span class="time-label" style="top:${((end-start)/30)*cell-10}px">23:00</span></div></div><div class="legend"><span><i class="legend-dot mine"></i>내 예약</span><span><i class="legend-dot"></i>다른 예약</span><span>30분 단위</span></div></div>`;
+      <div class="timetable ${weekly?'week-timetable':'day-timetable'}" aria-label="${weekly?'월요일부터 일요일까지 주간':fmtDate(selectedDate)} 예약 시간표"><div class="time-grid" style="height:${((end-start)/30)*cell}px;--time-step:${cell}px;--columns:${visibleDates.length}">${grid}</div></div>
+      <div class="legend"><span><i class="legend-dot mine"></i>내 예약</span><span><i class="legend-dot"></i>다른 예약</span><span class="legend-current"><i></i>현재</span></div>
+      <section class="day-agenda" aria-label="선택한 날짜의 예약 목록"><div class="agenda-heading"><h2>${fmtDate(selectedDate,false)}</h2><span>${dayBookings.length}건</span></div>${dayBookings.length?dayBookings.map(b=>`<button class="agenda-item ${b.owner==='me'?'mine':''}" data-action="go" data-route="reservation/${b.id}"><span class="agenda-time"><strong>${time(b.start)}</strong><small>${time(b.end)}</small></span><span class="agenda-copy"><strong>${esc(b.purpose)}</strong><small>${esc(b.name)} · ${b.people}명${b.owner==='me'?' · 내 예약':''}</small></span>${icon('next')}</button>`).join(''):'<p class="agenda-empty">예약이 없습니다. 원하는 시간을 선택해보세요.</p>'}</section>
+      </div>`;
   }
+
   const durationText = minutes => `${Math.floor(minutes/60)?Math.floor(minutes/60)+'시간':''}${minutes%60?(minutes>=60?' ':'')+minutes%60+'분':''}`;
   const timeOptions = (value, includeLast = true, minimum = 540) =>
     Array.from({ length: includeLast ? 29 : 28 }, (_, i) => 540 + i * 30)
@@ -339,7 +359,7 @@
     mainNav("", false);
     const cats =
       p.kind === "public" ? ["자유", "스터디", "공용물품"] : ["건의", "문의"];
-    return `<form id="post-form" data-id="${edit ? esc(id) : ""}" data-kind="${p.kind}" class="stack screen-enter"><span class="chip">${p.kind === "public" ? "일반 익명글" : "운영진 문의"}</span><div class="form-field"><label for="post-category">${p.kind === "public" ? "분류" : "문의 유형"}</label><select id="post-category" name="category">${cats.map((c) => `<option ${c === p.category ? "selected" : ""}>${c}</option>`).join("")}</select></div><div class="form-field"><label for="post-title">제목</label><input id="post-title" name="title" value="${esc(p.title)}" maxlength="60" placeholder="제목을 입력해주세요" required></div><div class="form-field"><label for="post-body">내용</label><textarea id="post-body" name="body" maxlength="2000" rows="9" placeholder="내용을 입력해주세요" required>${esc(p.body)}</textarea><span class="field-hint" id="character-count">${p.body.length} / 2,000</span></div><div class="notice">${icon(p.kind === "inquiry" ? "lock" : "chat")}<span>${p.kind === "inquiry" ? "이름과 문의 내용이 운영진에게 전달됩니다." : "동아리 회원에게 익명으로 공개됩니다."}</span></div><p class="form-error" id="post-error" role="alert"></p><button class="primary-button" type="submit">${edit ? "수정 내용 저장" : p.kind === "public" ? "글 등록" : "문의 보내기"}</button></form>`;
+    return `<form id="post-form" data-id="${edit ? esc(id) : ""}" data-kind="${p.kind}" class="stack screen-enter"><span class="chip">${p.kind === "public" ? "일반 익명글" : "운영진 문의"}</span><div class="form-field"><label for="post-category">${p.kind === "public" ? "분류" : "문의 유형"}</label><select id="post-category" name="category">${cats.map((c) => `<option ${c === p.category ? "selected" : ""}>${c}</option>`).join("")}</select></div><div class="form-field"><label for="post-title">제목</label><textarea id="post-title" class="post-title-editor" name="title" rows="2" maxlength="60" placeholder="제목을 입력해주세요" spellcheck="false" required>${esc(p.title)}</textarea></div><div class="form-field"><label for="post-body">내용</label><textarea id="post-body" name="body" maxlength="2000" rows="9" placeholder="내용을 입력해주세요" required>${esc(p.body)}</textarea><span class="field-hint" id="character-count">${p.body.length} / 2,000</span></div><div class="notice">${icon(p.kind === "inquiry" ? "lock" : "chat")}<span>${p.kind === "inquiry" ? "이름과 문의 내용이 운영진에게 전달됩니다." : "동아리 회원에게 익명으로 공개됩니다."}</span></div><p class="form-error" id="post-error" role="alert"></p><button class="primary-button" type="submit">${edit ? "수정 내용 저장" : p.kind === "public" ? "글 등록" : "문의 보내기"}</button></form>`;
   }
   function postDetail(id) {
     const p = state.posts.find((p) => p.id === id);
@@ -383,7 +403,7 @@
   }
   function settings() {
     appHeader('설정','home');mainNav('',false);
-    return `<div class="stack screen-enter"><div class="profile-card"><span class="profile-avatar">${icon('person')}</span><div><h2>${esc(user()?.displayName||'회원')}</h2><p class="muted">${roleName()}</p></div></div><section class="settings-group"><h2 class="section-title">내 계정</h2><button class="settings-row full-row" data-action="go" data-route="ball"><span>내 공 꾸미기</span>${icon('next')}</button><button class="settings-row full-row" data-action="go" data-route="${inboxRoute()}"><span>${staff()?'운영진 문의함':'내 문의'}</span>${icon('next')}</button></section>${staff()?`<section class="settings-group"><h2 class="section-title">동아리 운영</h2><button class="settings-row full-row" data-action="go" data-route="operator-code"><span>운영진 가입 코드</span>${icon('next')}</button>${admin()?`<button class="settings-row full-row" data-action="go" data-route="members"><span>회원 승인 관리</span>${icon('next')}</button>`:''}</section>`:''}<section class="settings-group"><h2 class="section-title">화면 설정</h2><button class="settings-row full-row" data-action="device-motion" aria-pressed="${SaiDeviceMotion.enabled}"><span>기기 움직임에 반응</span><strong id="device-motion-state">${SaiDeviceMotion.enabled?'켜짐':'켜기'}</strong></button><p class="helper left" id="device-motion-message">${esc(SaiDeviceMotion.message)}</p><button class="settings-row full-row" data-action="go" data-route="custom"><span>화면 꾸미기</span>${icon('next')}</button></section><button class="secondary-button" data-action="logout">로그아웃</button><p class="helper">SAI ROOM</p></div>`;
+    return `<div class="stack screen-enter"><div class="profile-card"><span class="profile-avatar">${icon('person')}</span><div><h2>${esc(user()?.displayName||'회원')}</h2><p class="muted">${roleName()}</p></div></div><section class="settings-group"><h2 class="section-title">내 계정</h2><button class="settings-row full-row" data-action="go" data-route="beacon"><span>자동 입퇴실</span>${icon("next")}</button><button class="settings-row full-row" data-action="go" data-route="ball"><span>내 공 꾸미기</span>${icon('next')}</button><button class="settings-row full-row" data-action="go" data-route="${inboxRoute()}"><span>${staff()?'운영진 문의함':'내 문의'}</span>${icon('next')}</button></section>${staff()?`<section class="settings-group"><h2 class="section-title">동아리 운영</h2><button class="settings-row full-row" data-action="go" data-route="operator-code"><span>운영진 가입 코드</span>${icon('next')}</button>${admin()?`<button class="settings-row full-row" data-action="go" data-route="members"><span>회원 승인 관리</span>${icon('next')}</button>`:''}</section>`:''}<section class="settings-group"><h2 class="section-title">화면 설정</h2><button class="settings-row full-row" data-action="device-motion" aria-pressed="${SaiDeviceMotion.enabled}"><span>기기 움직임에 반응</span><strong id="device-motion-state">${SaiDeviceMotion.enabled?'켜짐':'켜기'}</strong></button><p class="helper left" id="device-motion-message">${esc(SaiDeviceMotion.message)}</p><button class="settings-row full-row" data-action="go" data-route="custom"><span>화면 꾸미기</span>${icon('next')}</button></section><button class="secondary-button" data-action="logout">로그아웃</button><p class="helper">SAI ROOM</p></div>`;
   }
   function operatorCodeSettings(){
     appHeader('운영진 가입 코드','settings');mainNav('',false);
@@ -404,6 +424,16 @@
     const success=await mutate(async()=>{saved=await SaiBackend.rotateOperatorCode({newCode,currentPassword,version});},form.querySelector('[type=submit]'),error);
     form.elements.currentPassword.value='';
     if(success&&revision===authRevision&&staff()){form.reset();codeInfo=saved;codeSuccess=true;render();}
+  }
+  function beaconSettings(){
+    appHeader('자동 입퇴실','settings');mainNav('',false);
+    return `<div class="stack beacon-settings screen-enter"><div class="inquiry-heading"><span class="eyebrow">비콘 연동</span><h2>들어오면 입실,<br>나가면 퇴실.</h2><p>동방의 비콘 신호를 휴대폰 앱이 감지합니다.</p></div>${beaconError?`<p class="form-error" role="alert">${esc(beaconError)}</p>`:!beaconInfo?'<p class="muted">연결 상태를 확인하고 있습니다.</p>':`<div class="beacon-state"><span class="status-pill">${beaconInfo.paired?'기기 등록됨':beaconInfo.enabled?'연결 준비됨':'설치 준비 중'}</span><p>${beaconInfo.paired?'등록된 휴대폰 앱에서 자동 입퇴실을 관리합니다.':beaconInfo.enabled?'휴대폰 앱에서 자동 입퇴실을 켜주세요.':'비콘 설치와 휴대폰 앱 연동이 완료되면 사용할 수 있습니다.'}</p></div><ol class="beacon-steps"><li><strong>앱 설치와 로그인</strong><span>현재 웹 화면에서는 자동 감지가 동작하지 않습니다.</span></li><li><strong>처음 한 번 권한 허용</strong><span>블루투스와 백그라운드 감지 권한이 필요합니다.</span></li><li><strong>동방에 들어오면 자동 반영</strong><span>잠깐의 신호 끊김을 구분한 뒤 퇴실을 반영합니다.</span></li></ol>${beaconInfo.paired?'<button class="secondary-button" data-action="disconnect-beacon">자동 입퇴실 연결 해제</button>':''}`}<p class="helper left">기기 상태에 따라 감지가 늦어질 수 있습니다. 입·퇴실 버튼으로 직접 수정할 수 있습니다.</p><button class="text-button" data-action="refresh-beacon">상태 새로고침</button></div>`;
+  }
+  async function loadBeaconInfo(){
+    if(!approved()||beaconLoading)return;beaconLoading=true;beaconError='';const revision=authRevision;
+    try{const result=await SaiBackend.beaconConfig();if(revision===authRevision)beaconInfo=result;}
+    catch(e){if(revision===authRevision)beaconError=e.message;}
+    finally{if(revision===authRevision){beaconLoading=false;if(location.hash==='#beacon')render();}}
   }
   function launchScreen(){return `<div class="launch-screen" role="status"><div class="launch-mark"><img src="assets/sai-logo.png" alt="SAI 동아리 로고" width="112" height="112"></div><strong class="launch-wordmark">SAI ROOM</strong><span class="launch-progress" aria-hidden="true"></span><p>불러오는 중</p><span class="launch-caption">SEJONG ARTIFICIAL INTELLIGENCE</span></div>`;}
   function notFound() {
@@ -441,6 +471,7 @@
     else if (parts[0] === "post") html = postDetail(parts[1]);
     else if (route === "custom") html = custom();
     else if (route === "settings") html = settings();
+    else if (route === "beacon") html = beaconSettings();
     else html = notFound();
     const changed = (authenticated?route:'login') !== currentRoute;
     view.innerHTML = html;
@@ -448,15 +479,13 @@
     currentRoute = authenticated?route:'login';
     document.title = `${header.querySelector("h1").textContent} · SAI ROOM`;
     if (changed) view.focus({ preventScroll: true });
-    if (authenticated && route === "reservations")
-      $(".timetable").scrollTop = Math.max(
-        0,
-        ((selectedSlot.start - 540) / 30) * 44 - Math.min(80, $(".timetable").clientHeight / 4),
-      );
+
     if(approved())SaiMotion.mount(view,reading,state.settings.gauge,state.settings.theme);
     document.body.dataset.route=booting?'loading':!authenticated?(requested==='signup'?'signup':'login'):!approved()?'pending':route.split('/')[0];
     header.hidden=!approved();
+    if(approved()&&route==='reservations'&&scheduleMode==='day')requestAnimationFrame(()=>{const table=$('.day-timetable');if(table)table.scrollTop=Math.max(0,((selectedSlot.start-540)/30)*40-70);});
     if(!authenticated&&signupEmail&&$('#login-email'))$('#login-email').value=signupEmail;
+    if(approved()&&route==='beacon'&&!beaconInfo&&!beaconLoading&&!beaconError)loadBeaconInfo();
     if(approved()&&route==='operator-code'&&staff()&&!codeInfo&&!codeLoading&&!codeError)loadCodeInfo();
     if(approved()&&route==='members'&&admin()&&applications===null&&!applicationsLoading&&!applicationsError)loadApplications();
 
@@ -493,6 +522,8 @@
       },btn);
       return;
     }
+    if(action==='refresh-beacon'){beaconInfo=null;loadBeaconInfo();return;}
+    if(action==='disconnect-beacon'){if(await confirmAction('자동 입퇴실을 끌까요?','이 계정에 등록된 휴대폰의 자동 감지를 해제합니다.','연결 해제')){if(await mutate(()=>SaiBackend.disconnectBeacon(),btn)){beaconInfo=null;await loadBeaconInfo();await SaiPresence.refresh();}}return;}
     if(action==='refresh-applications'){applications=null;loadApplications();return;}
     if(action==='application-filter'&&admin()){applicationFilter=value;render();return;}
     if(action==='decide-member'&&admin()){
@@ -514,6 +545,10 @@
       selectedDate = addDay(selectedDate, action === "date-prev" ? -7 : 7);
       selectedSlot = { ...selectedSlot, date: selectedDate };selectedTimeEdited=false;
       render();
+    } else if(action==='schedule-view'){
+      scheduleMode=value==='day'?'day':'week';render();
+    } else if(action==='date-today'){
+      selectedDate=SaiData.day();selectedSlot={...selectedSlot,date:selectedDate};selectedTimeEdited=false;render();
     } else if (action === "date-select") {
       selectedDate=btn.dataset.date;selectedSlot={...selectedSlot,date:selectedDate};selectedTimeEdited=false;render();
     } else if (action === "slot") {
@@ -532,7 +567,7 @@
           return;
         }
       }
-      selectedSlot = slot;selectedTimeEdited=false;
+      selectedDate=slot.date;selectedSlot = slot;selectedTimeEdited=false;
       const sc = $(".timetable").scrollTop;
       render();
       $(".timetable").scrollTop = sc;
@@ -635,6 +670,7 @@
   });
   document.addEventListener("submit", async (e) => {
     const f = e.target;
+    if(composing || (!e.submitter && performance.now()-compositionEndedAt<80)){e.preventDefault();return;}
     if(f.id==="signup-form"){e.preventDefault();await submitSignup(f);return;}
     if(f.id==="login-form"){e.preventDefault();await submitLogin(f);return;}
     if(!approved())return;
@@ -697,7 +733,7 @@
       save(f.dataset.id ? "예약을 수정했어요" : "예약을 저장했어요");
       go("reservations");
     } else if (f.id === "post-form") {
-      const title = d.get("title").trim(),
+      const title = d.get("title").normalize("NFC").replace(/[\r\n]+/g, ' ').trim(),
         body = d.get("body").trim();
       if (!title || !body) {
         $("#post-error").textContent = "제목과 내용을 입력해주세요.";

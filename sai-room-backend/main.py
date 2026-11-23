@@ -13,6 +13,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from database import get_connection, init_db, postgres_enabled
 from security import PRODUCTION, PUBLIC_ORIGIN, TRUSTED_ORIGINS, current_user, initial_operator_code
 from api_v1 import router
+from beacon import router as beacon_router
 from maintenance import daily_backup
 
 ROOT=Path(__file__).resolve().parent.parent
@@ -82,6 +83,7 @@ async def validation_error(request,error):
     return JSONResponse({'error':{'code':'INVALID_INPUT'}},status_code=422)
 
 app.include_router(router)
+app.include_router(beacon_router)
 
 @app.get('/healthz')
 def health():

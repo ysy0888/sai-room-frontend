@@ -105,6 +105,7 @@ def init_sqlite():
             CREATE TABLE IF NOT EXISTS request_keys (user_id TEXT NOT NULL, key TEXT NOT NULL, fingerprint TEXT NOT NULL, response TEXT NOT NULL, expires_at INTEGER NOT NULL, PRIMARY KEY(user_id,key));
             CREATE TABLE IF NOT EXISTS ball_images (id TEXT PRIMARY KEY, owner_id TEXT NOT NULL REFERENCES users(id), png BLOB NOT NULL, created_at INTEGER NOT NULL);
             CREATE TABLE IF NOT EXISTS presence (user_id TEXT PRIMARY KEY REFERENCES users(id), checked_in_at INTEGER NOT NULL, expires_at INTEGER NOT NULL);
+            CREATE TABLE IF NOT EXISTS beacon_devices (user_id TEXT PRIMARY KEY REFERENCES users(id), token_hash TEXT NOT NULL UNIQUE, platform TEXT NOT NULL, created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL, last_observed_at INTEGER NOT NULL DEFAULT 0, last_event_id TEXT NOT NULL DEFAULT '', suppressed_until INTEGER NOT NULL DEFAULT 0, owns_presence INTEGER NOT NULL DEFAULT 0);
             CREATE TABLE IF NOT EXISTS room_state (id INTEGER PRIMARY KEY CHECK(id=1), sequence INTEGER NOT NULL DEFAULT 0);
             INSERT OR IGNORE INTO room_state (id,sequence) VALUES (1,0);
         """)
