@@ -89,7 +89,8 @@ npx cap open android   # Android Studio에서 기기 선택 후 Run
 npx cap open ios       # Xcode에서 Signing 팀 지정 후 Run
 ```
 
-- `http://` 주소는 같은 네트워크에서 테스트할 때만 쓰세요(평문 통신 허용). 운영은 `SAI_APP_URL=https://실제-도메인`입니다.
+- `http://` 주소는 같은 네트워크에서 테스트할 때만 쓰세요(평문 통신 허용). 운영은 Vercel 운영 주소를 씁니다: `SAI_APP_URL=https://<프로젝트>.vercel.app`(또는 연결한 도메인). 미리보기(브랜치) 주소는 배포마다 바뀌므로 앱에 넣지 마세요.
+- `android/`, `ios/`, `mobile/`은 `.vercelignore`로 Vercel 배포에서 제외됩니다. 앱은 Android Studio/Xcode에서 따로 빌드합니다.
 - 서버에 `SAI_ENV=production`이 설정돼 있으면 시뮬레이터가 비활성화되고, 서버도 시뮬레이터 신호를 거절합니다.
 - 앱 실행 → 로그인 → **설정 → 동방 자동 감지 → 자동 감지 켜기** → 권한 허용.
 - 네이티브 iBeacon 해석 테스트: `cd android && ./gradlew test` (`IBeaconParserTest`)

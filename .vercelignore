@@ -1,0 +1,22 @@
+.git
+.github
+.vscode
+.env*
+.venv
+.pytest_cache
+__pycache__
+**/__pycache__/**
+*.db*
+**/*.db*
+**/*.sqlite*
+**/*.initial-operator-code
+node_modules
+artifacts
+tests
+sai-room-backend/tests
+docs
+# Native mobile shell (built locally with Android Studio / Xcode, never deployed)
+android
+ios
+mobile
+capacitor.config.ts

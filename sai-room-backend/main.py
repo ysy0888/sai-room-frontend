@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from database import get_connection, init_db, postgres_enabled
-from security import PRODUCTION, PUBLIC_ORIGIN, current_user, initial_operator_code
+from security import PRODUCTION, PUBLIC_ORIGIN, TRUSTED_ORIGINS, current_user, initial_operator_code
 from api_v1 import router
 from beacon import router as beacon_router
 from maintenance import daily_backup
@@ -20,6 +20,8 @@ ROOT=Path(__file__).resolve().parent.parent
 
 @asynccontextmanager
 async def lifespan(app):
+    if os.environ.get('VERCEL') == '1' and not postgres_enabled():
+        raise RuntimeError('Vercel requires SAI_DATABASE_URL; local SQLite is not persistent')
     if PRODUCTION and not postgres_enabled() and not os.environ.get('SAI_DB_PATH'):
         raise RuntimeError('Production requires SAI_DATABASE_URL or SAI_DB_PATH on persistent storage')
     backups = not postgres_enabled() and bool(os.environ.get('SAI_BACKUP_DIR'))
@@ -48,8 +50,9 @@ async def lifespan(app):
             close_pool()
 
 app=FastAPI(title='SAI ROOM',lifespan=lifespan,docs_url=None if PRODUCTION else '/api/docs',redoc_url=None,openapi_url=None if PRODUCTION else '/api/openapi.json')
-# Development also accepts the host in SAI_PUBLIC_ORIGIN, e.g. a PC's LAN address for testing on a real phone.
-allowed_hosts=[urlsplit(PUBLIC_ORIGIN).hostname] if PRODUCTION else sorted({'localhost','127.0.0.1','testserver',urlsplit(PUBLIC_ORIGIN).hostname})
+# Production trusts only deployment domains (TRUSTED_ORIGINS). Development also accepts the host in
+# SAI_PUBLIC_ORIGIN, e.g. a PC's LAN address for testing on a real phone.
+allowed_hosts=[urlsplit(origin).hostname for origin in TRUSTED_ORIGINS] if PRODUCTION else sorted({'localhost','127.0.0.1','testserver',urlsplit(PUBLIC_ORIGIN).hostname})
 app.add_middleware(TrustedHostMiddleware,allowed_hosts=allowed_hosts)
 
 @app.middleware('http')
@@ -91,7 +94,10 @@ def health():
             conn.execute('SELECT sequence FROM room_state WHERE id=1').fetchone()
     except Exception:
         return JSONResponse({'status':'unavailable'}, status_code=503)
-    return {'status':'ok'}
+    result = {'status':'ok'}
+    if os.environ.get('VERCEL_REGION'):
+        result['region'] = os.environ['VERCEL_REGION']
+    return result
 
 @app.get('/media/balls/{image_id}.png')
 def ball_image(image_id:str,request:Request):

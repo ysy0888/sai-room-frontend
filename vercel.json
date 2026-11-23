@@ -1,0 +1,12 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "fastapi",
+  "regions": ["icn1"],
+  "functions": {
+    "app.py": {
+      "maxDuration": 60,
+      "includeFiles": "{index.html,assets/**,css/**,js/**,sai-room-backend/**}",
+      "excludeFiles": "{node_modules/**,tests/**,sai-room-backend/tests/**,docs/**,artifacts/**}"
+    }
+  }
+}

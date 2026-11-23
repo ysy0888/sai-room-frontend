@@ -53,9 +53,9 @@ npx cap open android                              # 또는: npx cap open ios
 
 ## 운영 서버 배포
 
-Render 배포는 루트의 `render.yaml`을 사용합니다. 싱가포르의 Free Web Service에 프론트와 API를 함께 배포하고, 데이터는 별도 Supabase Free PostgreSQL에 보관합니다. 영구 디스크는 생성하지 않습니다. 단계별 절차는 [배포 안내](docs/DEPLOY.md)를 참고하세요.
+Vercel 배포는 루트의 `vercel.json`을 사용합니다. 서울(`icn1`)에 프론트와 API를 함께 배포하고, 데이터는 Supabase Free 서울(`ap-northeast-2`)에 보관합니다. 단계별 절차는 [배포 안내](docs/DEPLOY.md)를 참고하세요.
 
-다른 서버에서는 `SAI_ENV=production`, `SAI_PUBLIC_ORIGIN=https://실제-도메인`, `SAI_DATABASE_URL`을 설정하고 HTTPS 역방향 프록시 뒤에서 실행하세요. 로컬 SQLite 운영 시에는 영구 디스크의 `SAI_DB_PATH`가 필요합니다. Render에서는 `SAI_PUBLIC_ORIGIN`을 생략하면 플랫폼의 `RENDER_EXTERNAL_URL`을 사용합니다. 프론트와 `/api/v1`, `/media`는 같은 출처를 사용해야 합니다. `.env.example`은 예시이며 자동으로 읽지 않습니다. 배포 시스템에서 환경변수를 주입하세요.
+다른 서버에서는 `SAI_ENV=production`, `SAI_PUBLIC_ORIGIN=https://실제-도메인`, `SAI_DATABASE_URL`을 설정하고 HTTPS 역방향 프록시 뒤에서 실행하세요. 로컬 SQLite 운영 시에는 영구 디스크의 `SAI_DB_PATH`가 필요합니다. Vercel에서는 `SAI_PUBLIC_ORIGIN`을 생략하면 플랫폼의 `VERCEL_PROJECT_PRODUCTION_URL`을 사용합니다. 프론트와 `/api/v1`, `/media`는 같은 출처를 사용해야 합니다. `.env.example`은 예시이며 자동으로 읽지 않습니다. 배포 시스템에서 환경변수를 주입하세요.
 
 PostgreSQL에서는 서버 전용 역할과 비공개 스키마를 사용하고, 예약·입퇴실 등 다단계 쓰기를 트랜잭션 잠금으로 보호합니다. DB 연결 비밀 값·운영진 코드·사용자 DB는 GitHub나 프론트 파일에 넣지 마세요.
 
@@ -95,8 +95,8 @@ npm run test:browser
 - 예약: 월~일을 한 줄에 표시하고 선택한 날짜의 시간표를 표시합니다. 시작·종료 시간을 30분 단위로 변경하며 본인 예약도 수정할 수 있습니다.
 - 각 화면의 상단 제목은 시각적으로 숨기고 접근성용 제목은 유지합니다.
 - 입퇴실 시 기존 공과 3D 장면을 유지하고 변경된 사람의 공만 추가·제거합니다.
-- GitHub Actions가 빌드·타입·프론트·API·브라우저 검사를 실행합니다. Render는 검사 통과 후 자동 배포합니다.
+- GitHub Actions가 빌드·타입·프론트·API·브라우저 검사를 실행합니다. 운영 배포 전에 이 검사들이 통과했는지 확인합니다.
 
 ## 무료 호스팅
 
-현재 배포 설정은 Render Free + 별도 Supabase PostgreSQL입니다. 서버가 잠들거나 재배포되어도 데이터는 외부 DB에 남습니다. 초기 접속 지연과 무료 사용량 제한이 있으며, [배포 절차](docs/DEPLOY.md)를 따릅니다. PostgreSQL 접속 비밀 값은 서버에만 보관합니다.
+현재 배포 설정은 Vercel 서울 + Supabase Free 서울 PostgreSQL입니다. 함수가 종료되거나 재배포되어도 데이터는 외부 DB에 남습니다. 초기 접속 지연과 무료 사용량 제한이 있으며, [배포 절차](docs/DEPLOY.md)를 따릅니다. PostgreSQL 접속 비밀 값은 서버에만 보관합니다.

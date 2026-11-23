@@ -12,12 +12,21 @@ from database import get_connection, DB_PATH, postgres_enabled
 from auth import hash_password, verify_password, token_hash
 
 PRODUCTION = os.environ.get('SAI_ENV') == 'production'
-PUBLIC_ORIGIN = (os.environ.get('SAI_PUBLIC_ORIGIN') or os.environ.get('RENDER_EXTERNAL_URL') or 'http://127.0.0.1:5317').rstrip('/')
+vercel_domain = os.environ.get('VERCEL_PROJECT_PRODUCTION_URL') if os.environ.get('VERCEL') == '1' else None
+PUBLIC_ORIGIN = (os.environ.get('SAI_PUBLIC_ORIGIN') or (f'https://{vercel_domain}' if vercel_domain else None) or os.environ.get('RENDER_EXTERNAL_URL') or 'http://127.0.0.1:5317').rstrip('/')
 origin_parts = urlsplit(PUBLIC_ORIGIN)
 if not origin_parts.hostname or origin_parts.username or origin_parts.password or origin_parts.path or origin_parts.query or origin_parts.fragment:
     raise RuntimeError('SAI_PUBLIC_ORIGIN must be an origin without a path or credentials')
 if PRODUCTION and not PUBLIC_ORIGIN.startswith('https://'):
     raise RuntimeError('Production requires SAI_PUBLIC_ORIGIN=https://your-domain')
+# Only deployment domains supplied by the hosting environment are trusted.
+# Never accept arbitrary vercel.app hosts or derive trust from request headers.
+TRUSTED_ORIGINS = {PUBLIC_ORIGIN}
+if PRODUCTION and os.environ.get('VERCEL') == '1':
+    for key in ('VERCEL_URL', 'VERCEL_BRANCH_URL'):
+        domain = os.environ.get(key, '')
+        if domain and re.fullmatch(r'[a-z0-9-]+\.vercel\.app', domain):
+            TRUSTED_ORIGINS.add('https://' + domain)
 COOKIE = '__Host-sai_session' if PRODUCTION else 'sai_session'
 SESSION_SECONDS = 8 * 3600
 DUMMY_HASH = hash_password(secrets.token_urlsafe(32))
@@ -89,7 +98,7 @@ def issue_session(request, response, user_id=None):
 
 def csrf_check(request):
     origin = request.headers.get('origin')
-    allowed = {PUBLIC_ORIGIN} if PRODUCTION else {PUBLIC_ORIGIN, str(request.base_url).rstrip('/')}
+    allowed = TRUSTED_ORIGINS if PRODUCTION else {PUBLIC_ORIGIN, str(request.base_url).rstrip('/')}
     if origin and origin not in allowed:
         fail(403, 'CSRF_FAILED')
     if request.headers.get('sec-fetch-site') == 'cross-site':
