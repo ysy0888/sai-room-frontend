@@ -71,8 +71,25 @@ CREATE TABLE IF NOT EXISTS presence (
 CREATE TABLE IF NOT EXISTS room_state (
   id INTEGER PRIMARY KEY CHECK(id=1), sequence BIGINT NOT NULL DEFAULT 0
 );
+-- v2: room beacon presence (same as migrations/postgres/002_beacon_presence.sql)
+CREATE TABLE IF NOT EXISTS beacon_settings (
+  id INTEGER PRIMARY KEY CHECK(id=1), enabled INTEGER NOT NULL DEFAULT 0,
+  uuid TEXT, major INTEGER CHECK(major BETWEEN 0 AND 65535), minor INTEGER CHECK(minor BETWEEN 0 AND 65535),
+  enter_rssi INTEGER NOT NULL DEFAULT -75, exit_rssi INTEGER NOT NULL DEFAULT -85,
+  report_interval INTEGER NOT NULL DEFAULT 30, exit_grace INTEGER NOT NULL DEFAULT 120,
+  reference_capacity INTEGER NOT NULL DEFAULT 15,
+  version INTEGER NOT NULL DEFAULT 1, updated_at BIGINT, updated_by TEXT REFERENCES users(id)
+);
+INSERT INTO beacon_settings (id) VALUES (1) ON CONFLICT(id) DO NOTHING;
+CREATE TABLE IF NOT EXISTS beacon_presence (
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, device_id TEXT NOT NULL,
+  entered_at BIGINT NOT NULL, last_seen_at BIGINT NOT NULL, rssi INTEGER NOT NULL,
+  source TEXT NOT NULL DEFAULT 'native' CHECK(source IN ('native','simulator')),
+  PRIMARY KEY (user_id, device_id)
+);
+CREATE INDEX IF NOT EXISTS beacon_presence_seen ON beacon_presence(last_seen_at);
 INSERT INTO room_state VALUES (1,0) ON CONFLICT(id) DO NOTHING;
-INSERT INTO schema_version VALUES (1,1) ON CONFLICT(id) DO NOTHING;
+INSERT INTO schema_version VALUES (1,2) ON CONFLICT(id) DO UPDATE SET version=GREATEST(schema_version.version,2);
 
 -- Runtime role is provisioned separately. It has DML access, no schema ownership,
 -- no DDL, no Supabase admin privileges, and no access to other applications.

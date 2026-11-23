@@ -107,5 +107,21 @@ def init_sqlite():
             CREATE TABLE IF NOT EXISTS presence (user_id TEXT PRIMARY KEY REFERENCES users(id), checked_in_at INTEGER NOT NULL, expires_at INTEGER NOT NULL);
             CREATE TABLE IF NOT EXISTS room_state (id INTEGER PRIMARY KEY CHECK(id=1), sequence INTEGER NOT NULL DEFAULT 0);
             INSERT OR IGNORE INTO room_state (id,sequence) VALUES (1,0);
+            -- Beacon presence (additive, idempotent). Thresholds below are TEST defaults to be tuned in the real club room.
+            CREATE TABLE IF NOT EXISTS beacon_settings (
+                id INTEGER PRIMARY KEY CHECK(id=1), enabled INTEGER NOT NULL DEFAULT 0,
+                uuid TEXT, major INTEGER, minor INTEGER,
+                enter_rssi INTEGER NOT NULL DEFAULT -75, exit_rssi INTEGER NOT NULL DEFAULT -85,
+                report_interval INTEGER NOT NULL DEFAULT 30, exit_grace INTEGER NOT NULL DEFAULT 120,
+                reference_capacity INTEGER NOT NULL DEFAULT 15,
+                version INTEGER NOT NULL DEFAULT 1, updated_at INTEGER, updated_by TEXT REFERENCES users(id)
+            );
+            INSERT OR IGNORE INTO beacon_settings (id) VALUES (1);
+            CREATE TABLE IF NOT EXISTS beacon_presence (
+                user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, device_id TEXT NOT NULL,
+                entered_at INTEGER NOT NULL, last_seen_at INTEGER NOT NULL, rssi INTEGER NOT NULL,
+                source TEXT NOT NULL DEFAULT 'native', PRIMARY KEY (user_id, device_id)
+            );
+            CREATE INDEX IF NOT EXISTS beacon_presence_seen ON beacon_presence(last_seen_at);
         """)
         conn.commit()

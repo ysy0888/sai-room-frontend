@@ -17,6 +17,7 @@ from psycopg_pool import ConnectionPool
 _pool = None
 _lock = Lock()
 WRITE_LOCK = 734104261
+SCHEMA_VERSION = 2
 TOKEN = re.compile(r"'(?:''|[^'])*'|\"(?:\"\"|[^\"])*\"|\?|\b(?:end|window)\b")
 
 
@@ -96,5 +97,9 @@ def connection():
 def verify_schema():
     with connection() as conn:
         row = conn.execute('SELECT version FROM schema_version WHERE id=1').fetchone()
-        if not row or row['version'] != 1:
+        if not row:
             raise RuntimeError('Apply the SAI PostgreSQL schema before starting the server')
+        if row['version'] < SCHEMA_VERSION:
+            raise RuntimeError('Run sai-room-backend/migrations/postgres/002_beacon_presence.sql as the database administrator, then restart')
+        if row['version'] > SCHEMA_VERSION:
+            raise RuntimeError('Database schema is newer than this server; deploy the matching server version')

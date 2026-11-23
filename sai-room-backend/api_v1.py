@@ -159,7 +159,11 @@ def login(data:Login,request:Request,response:Response):
 @router.post('/auth/logout',status_code=204)
 def logout(request:Request,response:Response):
     row=csrf_check(request)
-    with get_connection() as conn: conn.execute('DELETE FROM web_sessions WHERE token_hash=?',(row['token_hash'],))
+    with get_connection() as conn:
+        conn.execute('DELETE FROM web_sessions WHERE token_hash=?',(row['token_hash'],))
+        # Logging out must not leave the member counted by the beacon until the grace window ends.
+        if row['user_id'] and conn.execute('DELETE FROM beacon_presence WHERE user_id=?',(row['user_id'],)).rowcount:
+            conn.execute('UPDATE room_state SET sequence=sequence+1 WHERE id=1')
     response.delete_cookie(COOKIE,path='/',httponly=True,samesite='strict')
 
 @router.get('/bootstrap')
@@ -337,14 +341,20 @@ def check_out(request:Request):
     return mutation(request,user,{},action)
 
 def presence_snapshot(request,room_id,include_members=False):
+    import beacon  # imported lazily: beacon imports this module
     room_check(room_id);user=current_user(request)
     with get_connection() as conn:
         conn.execute('BEGIN IMMEDIATE')
-        removed=conn.execute("DELETE FROM presence WHERE expires_at<=? OR user_id IN (SELECT id FROM users WHERE status!='approved')",(int(time.time()),)).rowcount
+        t=beacon.now();settings=beacon.load_settings(conn)
+        removed=conn.execute("DELETE FROM presence WHERE expires_at<=? OR user_id IN (SELECT id FROM users WHERE status!='approved')",(int(t),)).rowcount
+        removed+=beacon.purge(conn,settings,t)
         if removed: conn.execute('UPDATE room_state SET sequence=sequence+1 WHERE id=1')
-        rows=conn.execute('SELECT users.* FROM presence JOIN users ON users.id=presence.user_id ORDER BY checked_in_at,users.id').fetchall()
+        since=beacon.active_since(conn,settings,t)
+        ids=sorted(since,key=lambda u:(since[u],u))
+        rows=[r for r in (conn.execute('SELECT * FROM users WHERE id=?',(i,)).fetchone() for i in ids) if r]
         sequence=conn.execute('SELECT sequence FROM room_state WHERE id=1').fetchone()[0]
-        result={'count':len(rows),'referenceCapacity':15,'sequence':sequence,'checkedIn':any(r['id']==user['id'] for r in rows),'observedAt':datetime.now(ZoneInfo('UTC')).isoformat()}
+        result={'count':len(rows),'referenceCapacity':settings['reference_capacity'],'sequence':sequence,'checkedIn':any(r['id']==user['id'] for r in rows),'observedAt':datetime.fromtimestamp(t,ZoneInfo('UTC')).isoformat(),
+                'lastDetectionAt':beacon.last_detection_iso(conn),'beacon':{'enabled':bool(settings['enabled']),'configured':bool(settings['uuid'])}}
         if include_members: result.update({'hiddenCount':0,'members':[{'id':r['id'],'displayName':'익명 회원' if r['ball_anonymous'] else r['name'],'isSelf':r['id']==user['id'],'ball':ball_style(r)} for r in rows]})
         return result
 @router.get('/rooms/{room_id}/occupancy')

@@ -13,6 +13,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from database import get_connection, init_db, postgres_enabled
 from security import PRODUCTION, PUBLIC_ORIGIN, current_user, initial_operator_code
 from api_v1 import router
+from beacon import router as beacon_router
 from maintenance import daily_backup
 
 ROOT=Path(__file__).resolve().parent.parent
@@ -47,7 +48,8 @@ async def lifespan(app):
             close_pool()
 
 app=FastAPI(title='SAI ROOM',lifespan=lifespan,docs_url=None if PRODUCTION else '/api/docs',redoc_url=None,openapi_url=None if PRODUCTION else '/api/openapi.json')
-allowed_hosts=[urlsplit(PUBLIC_ORIGIN).hostname] if PRODUCTION else ['localhost','127.0.0.1','testserver']
+# Development also accepts the host in SAI_PUBLIC_ORIGIN, e.g. a PC's LAN address for testing on a real phone.
+allowed_hosts=[urlsplit(PUBLIC_ORIGIN).hostname] if PRODUCTION else sorted({'localhost','127.0.0.1','testserver',urlsplit(PUBLIC_ORIGIN).hostname})
 app.add_middleware(TrustedHostMiddleware,allowed_hosts=allowed_hosts)
 
 @app.middleware('http')
@@ -80,6 +82,7 @@ async def validation_error(request,error):
     return JSONResponse({'error':{'code':'INVALID_INPUT'}},status_code=422)
 
 app.include_router(router)
+app.include_router(beacon_router)
 
 @app.get('/healthz')
 def health():
