@@ -188,7 +188,7 @@
   }
   function announceAuth(){document.dispatchEvent(new Event('sai:auth-change'));}
   function clearSession(expired=false){
-    authenticated=false;booting=false;sessionExpired=expired;bootError='';authRevision++;codeInfo=null;codeError='';codeLoading=false;codeSuccess=false;checkedIn=false;applications=null;applicationsError='';applicationsLoading=false;applicationRevision++;draftBall=null;ball={anonymous:false,color:'#233f6d',imageId:null,imageUrl:null};boardKind='public';boardFilter='전체';
+    authenticated=false;booting=false;sessionExpired=expired;bootError='';authRevision++;SaiBeacon.stop({report:false}).catch(()=>{});SaiBeacon.reset();beaconLoadError='';beaconSaved=false;codeInfo=null;codeError='';codeLoading=false;codeSuccess=false;checkedIn=false;applications=null;applicationsError='';applicationsLoading=false;applicationRevision++;draftBall=null;ball={anonymous:false,color:'#233f6d',imageId:null,imageUrl:null};boardKind='public';boardFilter='전체';
     state.bookings=[];state.posts=[];SaiBackend.clear();SaiPresence.stop();SaiDeviceMotion.stop();SaiMotion.unmount();
     for(const dialog of document.querySelectorAll('dialog[open]'))dialog.close();
     const detail=$('#presence-details-body');if(detail)detail.replaceChildren();
@@ -212,7 +212,7 @@
     mainNav('home');
     const n=reading.snapshot?.count;
     const slot=nextFreeSlot(),next=[...state.bookings].filter(b=>new Date(`${b.date}T${time(b.end)}:00+09:00`).getTime()>Date.now()).sort((a,b)=>(a.date+time(a.start)).localeCompare(b.date+time(b.start)))[0];
-    return `<div class="home-view"><div class="room-intro"><div><h2>동방 현황</h2></div><span class="connection-pill" id="presence-connection"><i></i>연결 중</span></div><section class="occupancy-section" aria-label="동아리방 현황">${gauge(state.settings.gauge,n)}<div class="presence-meta"><span id="presence-updated">현황 확인 중</span><button class="text-button refresh-button" data-action="refresh">${icon('refresh')}<span>새로고침</span></button></div><p id="presence-issue" class="connection-note" hidden></p><span id="occupancy-mood" class="sr-only"></span><span id="presence-live" class="sr-only" aria-live="polite" aria-atomic="true"></span></section><div class="check-in-row"><div><strong>${checkedIn?'동방에 있어요':'동방에 도착했나요?'}</strong><p>직접 입·퇴실 기록 · 입실 후 4시간 유지</p></div><button class="${checkedIn?'secondary':'primary'}-button" data-action="toggle-check-in">${checkedIn?'퇴실하기':'입실하기'}</button></div>${staff()?`<button class="staff-entry" data-action="go" data-route="inbox"><span>${icon("chat")} 운영진 문의함</span><strong>${state.posts.filter(p=>p.kind==="inquiry"&&p.status!=="answered").length}건 대기 ${icon("next")}</strong></button>`:""}${admin()?`<button class="staff-entry" data-action="go" data-route="members"><span>${icon("person")} 회원 승인</span>${icon("next")}</button>`:""}<div class="bottle-tools"><button data-action="device-motion" aria-pressed="${SaiDeviceMotion.enabled}">${icon("refresh")}<span id="device-motion-state">${SaiDeviceMotion.enabled?"기기 움직임 켜짐":"기기 움직임 켜기"}</span></button><button data-action="go" data-route="ball">내 공 꾸미기 ${icon("next")}</button></div><p class="helper left" id="device-motion-message">${esc(SaiDeviceMotion.message)}</p><button class="free-window" data-action="reserve-free"><span class="free-window-icon">${icon('calendar')}</span><span><strong>예약하기</strong><small>${slot?`${slot.date===SaiData.day()?'오늘':fmtDate(slot.date,false)} ${time(slot.start)}–${time(slot.end)} 이용 가능`:'시간표에서 빈 시간을 선택하세요'}</small></span>${icon('next')}</button>${next?`<div class="next-heading">다음 예약</div><button class="next-reservation" data-action="go" data-route="reservation/${next.id}"><span class="booking-date-mark"><small>${dateObj(next.date).toLocaleDateString('ko-KR',{month:'short'})}</small><strong>${dateObj(next.date).getDate()}</strong></span><span class="next-copy"><strong>${esc(next.purpose)}</strong><span>${time(next.start)}–${time(next.end)} · ${next.people}명</span></span>${icon('next')}</button>`:`<div class="empty-upcoming">예정된 예약이 없습니다.</div>`}</div>`;
+    return `<div class="home-view"><div class="room-intro"><div><h2>동방 현황</h2></div><span class="connection-pill" id="presence-connection"><i></i>연결 중</span></div><section class="occupancy-section" aria-label="동아리방 현황">${gauge(state.settings.gauge,n)}<div class="presence-meta"><span id="presence-updated">현황 확인 중</span><button class="text-button refresh-button" data-action="refresh">${icon('refresh')}<span>새로고침</span></button></div><p id="presence-issue" class="connection-note" hidden></p><span id="occupancy-mood" class="sr-only"></span><span id="presence-live" class="sr-only" aria-live="polite" aria-atomic="true"></span></section><div class="check-in-row"><div><strong>${checkedIn?'동방에 있어요':'동방에 도착했나요?'}</strong><p>직접 입·퇴실 기록 · 입실 후 4시간 유지</p></div><button class="${checkedIn?'secondary':'primary'}-button" data-action="toggle-check-in">${checkedIn?'퇴실하기':'입실하기'}</button></div><p class="helper left beacon-note">현재 인원은 앱에서 감지·입실한 회원 수이며 전체 방문자가 아닙니다. <span id="beacon-last">${esc(beaconNoteText(reading&&reading.snapshot))}</span> <button class="text-button" data-action="go" data-route="beacon">자동 감지 설정</button></p>${staff()?`<button class="staff-entry" data-action="go" data-route="inbox"><span>${icon("chat")} 운영진 문의함</span><strong>${state.posts.filter(p=>p.kind==="inquiry"&&p.status!=="answered").length}건 대기 ${icon("next")}</strong></button>`:""}${admin()?`<button class="staff-entry" data-action="go" data-route="members"><span>${icon("person")} 회원 승인</span>${icon("next")}</button>`:""}<div class="bottle-tools"><button data-action="device-motion" aria-pressed="${SaiDeviceMotion.enabled}">${icon("refresh")}<span id="device-motion-state">${SaiDeviceMotion.enabled?"기기 움직임 켜짐":"기기 움직임 켜기"}</span></button><button data-action="go" data-route="ball">내 공 꾸미기 ${icon("next")}</button></div><p class="helper left" id="device-motion-message">${esc(SaiDeviceMotion.message)}</p><button class="free-window" data-action="reserve-free"><span class="free-window-icon">${icon('calendar')}</span><span><strong>예약하기</strong><small>${slot?`${slot.date===SaiData.day()?'오늘':fmtDate(slot.date,false)} ${time(slot.start)}–${time(slot.end)} 이용 가능`:'시간표에서 빈 시간을 선택하세요'}</small></span>${icon('next')}</button>${next?`<div class="next-heading">다음 예약</div><button class="next-reservation" data-action="go" data-route="reservation/${next.id}"><span class="booking-date-mark"><small>${dateObj(next.date).toLocaleDateString('ko-KR',{month:'short'})}</small><strong>${dateObj(next.date).getDate()}</strong></span><span class="next-copy"><strong>${esc(next.purpose)}</strong><span>${time(next.start)}–${time(next.end)} · ${next.people}명</span></span>${icon('next')}</button>`:`<div class="empty-upcoming">예정된 예약이 없습니다.</div>`}</div>`;
   }
   function reservations() {
     // 저장된 예약 위에 선택 표시가 겹치지 않도록 빈 구간으로 이동합니다.
@@ -383,7 +383,46 @@
   }
   function settings() {
     appHeader('설정','home');mainNav('',false);
-    return `<div class="stack screen-enter"><div class="profile-card"><span class="profile-avatar">${icon('person')}</span><div><h2>${esc(user()?.displayName||'회원')}</h2><p class="muted">${roleName()}</p></div></div><section class="settings-group"><h2 class="section-title">내 계정</h2><button class="settings-row full-row" data-action="go" data-route="ball"><span>내 공 꾸미기</span>${icon('next')}</button><button class="settings-row full-row" data-action="go" data-route="${inboxRoute()}"><span>${staff()?'운영진 문의함':'내 문의'}</span>${icon('next')}</button></section>${staff()?`<section class="settings-group"><h2 class="section-title">동아리 운영</h2><button class="settings-row full-row" data-action="go" data-route="operator-code"><span>운영진 가입 코드</span>${icon('next')}</button>${admin()?`<button class="settings-row full-row" data-action="go" data-route="members"><span>회원 승인 관리</span>${icon('next')}</button>`:''}</section>`:''}<section class="settings-group"><h2 class="section-title">화면 설정</h2><button class="settings-row full-row" data-action="device-motion" aria-pressed="${SaiDeviceMotion.enabled}"><span>기기 움직임에 반응</span><strong id="device-motion-state">${SaiDeviceMotion.enabled?'켜짐':'켜기'}</strong></button><p class="helper left" id="device-motion-message">${esc(SaiDeviceMotion.message)}</p><button class="settings-row full-row" data-action="go" data-route="custom"><span>화면 꾸미기</span>${icon('next')}</button></section><button class="secondary-button" data-action="logout">로그아웃</button><p class="helper">SAI ROOM</p></div>`;
+    return `<div class="stack screen-enter"><div class="profile-card"><span class="profile-avatar">${icon('person')}</span><div><h2>${esc(user()?.displayName||'회원')}</h2><p class="muted">${roleName()}</p></div></div><section class="settings-group"><h2 class="section-title">내 계정</h2><button class="settings-row full-row" data-action="go" data-route="ball"><span>내 공 꾸미기</span>${icon('next')}</button><button class="settings-row full-row" data-action="go" data-route="beacon"><span>동방 자동 감지</span><strong>${SaiBeacon.running?'켜짐':'꺼짐'}</strong></button><button class="settings-row full-row" data-action="go" data-route="${inboxRoute()}"><span>${staff()?'운영진 문의함':'내 문의'}</span>${icon('next')}</button></section>${staff()?`<section class="settings-group"><h2 class="section-title">동아리 운영</h2><button class="settings-row full-row" data-action="go" data-route="operator-code"><span>운영진 가입 코드</span>${icon('next')}</button><button class="settings-row full-row" data-action="go" data-route="beacon-settings"><span>동방 비콘 등록·설정</span>${icon('next')}</button>${admin()?`<button class="settings-row full-row" data-action="go" data-route="members"><span>회원 승인 관리</span>${icon('next')}</button>`:''}</section>`:''}<section class="settings-group"><h2 class="section-title">화면 설정</h2><button class="settings-row full-row" data-action="device-motion" aria-pressed="${SaiDeviceMotion.enabled}"><span>기기 움직임에 반응</span><strong id="device-motion-state">${SaiDeviceMotion.enabled?'켜짐':'켜기'}</strong></button><p class="helper left" id="device-motion-message">${esc(SaiDeviceMotion.message)}</p><button class="settings-row full-row" data-action="go" data-route="custom"><span>화면 꾸미기</span>${icon('next')}</button></section><button class="secondary-button" data-action="logout">로그아웃</button><p class="helper">SAI ROOM</p></div>`;
+  }
+
+  /* ---- Room beacon (automatic presence) ---- */
+  let beaconLoading=false,beaconLoadError='',beaconSaved=false;
+  const beaconLabel={off:'꺼짐',starting:'준비 중',scanning:'신호 찾는 중',inside:'동방에서 감지됨',weak:'신호 약함','unsupported':'사용 불가','not-configured':'미등록','bluetooth-off':'블루투스 꺼짐','permission-denied':'권한 필요','server-error':'전송 실패'};
+  function beaconNoteText(snapshot){
+    if(!snapshot||!snapshot.beacon)return '';
+    if(!snapshot.beacon.enabled||!snapshot.beacon.configured)return '자동 감지 꺼짐 · 직접 입실한 회원만 집계';
+    return snapshot.lastDetectionAt?`마지막 감지 ${new Date(snapshot.lastDetectionAt).toLocaleTimeString('ko-KR',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit'})}`:'아직 감지된 회원 없음';
+  }
+  async function loadBeacon(){
+    if(beaconLoading)return;beaconLoading=true;beaconLoadError='';const revision=authRevision;
+    try{await SaiBeacon.load();}catch(e){if(revision===authRevision)beaconLoadError=e.message;}
+    finally{if(revision===authRevision){beaconLoading=false;if(['#beacon','#beacon-settings'].includes(location.hash))render();}}
+  }
+  function beaconScreen(){
+    appHeader('동방 자동 감지','settings');mainNav('',false);
+    const st=SaiBeacon.status,cfg=st.config,on=SaiBeacon.running,sim=SaiBeacon.simulator;
+    const simBlock=cfg&&cfg.simulatorAllowed?`<section class="settings-group beacon-dev"><h2 class="section-title">개발 모드 전용 · 감지 시뮬레이터</h2><p class="helper left">실제 비콘 없이 내 계정의 감지 흐름만 확인합니다. 운영 서버에서는 나타나지 않으며 서버도 거절합니다.</p><button class="settings-row full-row" data-action="beacon-sim-toggle" aria-pressed="${!!st.useSimulator}"><span>시뮬레이터 사용</span><strong>${st.useSimulator?'선택됨':'선택'}</strong></button>${sim?`<div class="beacon-sim-modes" role="group" aria-label="시뮬레이션 신호">${[['strong','강함 -60'],['edge','경계 -80'],['weak','약함 -95'],['lost','끊김']].map(([m,l])=>`<button class="${sim.mode===m?'primary':'secondary'}-button" data-action="beacon-sim-mode" data-value="${m}" aria-pressed="${sim.mode===m}">${l}</button>`).join('')}</div>`:'<p class="helper left">시뮬레이터를 선택한 뒤 자동 감지를 켜면 신호 버튼이 나타납니다.</p>'}</section>`:'';
+    return `<div class="beacon-view stack screen-enter"><div class="inquiry-heading"><h2>동방 자동 감지</h2><p>휴대폰이 동방 비콘 신호를 감지하면 서버가 현재 인원에 반영합니다. 홈의 숫자는 <strong>앱으로 감지·입실한 회원 수</strong>이며 실제 전체 방문자 수가 아닙니다.</p></div>${beaconLoadError?`<div class="auth-notice" role="alert">${esc(beaconLoadError)}<button class="text-button" data-action="refresh-beacon">다시 불러오기</button></div>`:''}<div class="beacon-status" data-code="${esc(st.code)}" role="status" aria-live="polite"><strong>${esc(beaconLabel[st.code]||'')}</strong><p>${esc(st.text||'')}</p>${st.lastReportAt?`<p class="helper left">마지막 전송 ${new Date(st.lastReportAt).toLocaleTimeString('ko-KR',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',second:'2-digit'})}</p>`:''}</div><button class="${on?'secondary':'primary'}-button" data-action="beacon-toggle" ${beaconLoading?'disabled':''}>${on?'자동 감지 끄기':'자동 감지 켜기'}</button><p class="helper left">앱 화면이 켜져 있고 열려 있을 때 가장 안정적으로 동작합니다. 앱을 닫거나 화면이 잠기면 감지가 멈출 수 있고, 일정 시간 신호가 오지 않으면 자동으로 인원에서 빠집니다. 위치·블루투스 권한은 비콘 신호를 읽기 위한 것이며 위치를 저장하지 않습니다.</p>${simBlock}</div>`;
+  }
+  function beaconSettingsScreen(){
+    appHeader('비콘 설정','settings');mainNav('',false);
+    const c=SaiBeacon.status.config;
+    if(beaconLoadError)return `<div class="beacon-view stack screen-enter"><div class="auth-notice" role="alert">${esc(beaconLoadError)}<button class="text-button" data-action="refresh-beacon">다시 불러오기</button></div></div>`;
+    if(!c)return '<div class="beacon-view stack screen-enter"><p class="muted" role="status">설정을 불러오는 중입니다.</p></div>';
+    const field=(id,label,value,attrs,hint)=>`<div class="auth-field"><label for="beacon-${id}">${label}</label><input id="beacon-${id}" name="${id}" value="${esc(value??'')}" ${attrs}>${hint?`<p class="helper left">${hint}</p>`:''}</div>`;
+    const num='type="number" inputmode="numeric" step="1" required';
+    return `<div class="beacon-view stack screen-enter"><div class="inquiry-heading"><h2>동방 비콘 등록</h2><p>비폰 매니저 앱에서 HE5를 검색해 확인한 <strong>UUID · Major · Minor</strong>를 입력하세요. 이 값은 동방 비콘을 구분하는 번호일 뿐 비밀번호나 출입 인증이 아닙니다.</p></div>${beaconSaved?'<p class="code-success" role="status">저장했습니다.</p>':''}${c.usingTestDefaults?'<div class="auth-notice" role="note">신호 기준과 시간은 <strong>테스트용 초깃값</strong>입니다. 실제 동방에서 확인한 뒤 조정해주세요.</div>':''}<form id="beacon-config-form" class="auth-form"><label class="beacon-check"><input type="checkbox" name="enabled" ${c.enabled?'checked':''}><span>자동 감지 사용</span></label>${field('uuid','UUID',c.uuid,'type="text" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="36" placeholder="11111111-2222-3333-4444-555555555555"')}${field('major','Major (비우면 모두 허용)',c.major,'type="number" inputmode="numeric" min="0" max="65535" step="1"')}${field('minor','Minor (비우면 모두 허용)',c.minor,'type="number" inputmode="numeric" min="0" max="65535" step="1"')}${field('enterRssi','입실 신호 기준 (dBm)',c.enterRssi,num+' min="-120" max="-30"','이 값보다 강해야 동방으로 인식합니다. 예: -75')}${field('exitRssi','유지 신호 기준 (dBm)',c.exitRssi,num+' min="-120" max="-30"','이미 입실한 뒤에는 이 값까지 허용합니다. 입실 기준보다 약해야 합니다.')}${field('reportIntervalSeconds','갱신 간격 (초)',c.reportIntervalSeconds,num+' min="10" max="300"')}${field('exitGraceSeconds','퇴실 유예시간 (초)',c.exitGraceSeconds,num+' min="30" max="900"','이 시간 동안 갱신이 없으면 인원에서 제외합니다. 갱신 간격의 2배 이상이어야 합니다.')}${field('referenceCapacity','기준 인원 (게이지 가득 참)',c.referenceCapacity,num+' min="1" max="100"','기준을 넘어도 숫자는 정확히 표시하고 게이지만 가득 찬 상태로 유지합니다.')}<p class="form-error auth-error" id="beacon-config-error" role="alert" aria-live="polite"></p><button class="primary-button auth-submit" type="submit"><span>저장</span>${icon('check')}</button></form></div>`;
+  }
+  async function submitBeaconConfig(form){
+    const c=SaiBeacon.status.config;if(!staff()||!c||busy)return;const error=$('#beacon-config-error');error.textContent='';beaconSaved=false;
+    const n=name=>{const v=form.elements[name].value.trim();return v===''?null:Number(v);};
+    const body={version:c.version,enabled:form.elements.enabled.checked,uuid:form.elements.uuid.value.trim()||null,major:n('major'),minor:n('minor'),enterRssi:n('enterRssi'),exitRssi:n('exitRssi'),reportIntervalSeconds:n('reportIntervalSeconds'),exitGraceSeconds:n('exitGraceSeconds'),referenceCapacity:n('referenceCapacity')};
+    for(const k of ['major','minor'])if(body[k]!==null&&!Number.isInteger(body[k])){error.textContent='Major·Minor는 0–65535 정수로 입력해주세요.';return;}
+    for(const k of ['enterRssi','exitRssi','reportIntervalSeconds','exitGraceSeconds','referenceCapacity'])if(!Number.isInteger(body[k])){error.textContent='숫자 항목을 확인해주세요.';return;}
+    const revision=authRevision;
+    const ok=await mutate(async()=>{await SaiBackend.saveBeaconConfig(body);await SaiBeacon.load();},form.querySelector('[type="submit"]'),error);
+    if(ok&&revision===authRevision){beaconSaved=true;SaiPresence.refresh({afterWrite:true});render();}
   }
   function operatorCodeSettings(){
     appHeader('운영진 가입 코드','settings');mainNav('',false);
@@ -434,6 +473,8 @@
     else if (route === "inbox") html=staff()?board(true):forbidden();
     else if (route === "members") html=admin()?membershipAdmin():forbidden();
     else if (route === "operator-code") html=staff()?operatorCodeSettings():forbidden();
+    else if (route === "beacon") html=beaconScreen();
+    else if (route === "beacon-settings") html=staff()?beaconSettingsScreen():forbidden();
     else if (route === "ball") html=ballSettings();
     else if (route === "post/new") html = postForm();
     else if (parts[0] === "post" && parts[1] === "edit")
@@ -459,6 +500,7 @@
     if(!authenticated&&signupEmail&&$('#login-email'))$('#login-email').value=signupEmail;
     if(approved()&&route==='operator-code'&&staff()&&!codeInfo&&!codeLoading&&!codeError)loadCodeInfo();
     if(approved()&&route==='members'&&admin()&&applications===null&&!applicationsLoading&&!applicationsError)loadApplications();
+    if(approved()&&(route==='beacon'||(route==='beacon-settings'&&staff()))&&!SaiBeacon.status.config&&!beaconLoading&&!beaconLoadError)loadBeacon();
 
   }
   const isPastSlot = b => new Date(`${b.date}T${time(b.start)}:00+09:00`).getTime() <= Date.now();
@@ -482,6 +524,10 @@
     if(!authenticated)return;
     if(action==='logout'){if(await mutate(()=>SaiBackend.logout(),btn)){clearSession(false);history.replaceState(null,'',location.pathname+location.search+'#login');render();}return;}
     if(!approved())return;
+    if(action==='beacon-toggle'){if(SaiBeacon.running)await SaiBeacon.stop();else await SaiBeacon.start({userInitiated:true});return;}
+    if(action==='beacon-sim-toggle'){SaiBeacon.useSimulator(!SaiBeacon.status.useSimulator);return;}
+    if(action==='beacon-sim-mode'){if(SaiBeacon.simulator)SaiBeacon.simulator.setMode(value);render();return;}
+    if(action==='refresh-beacon'){beaconLoadError='';await loadBeacon();return;}
     if(action==='refresh-code'&&staff()){codeInfo=null;codeSuccess=false;codeError='';await loadCodeInfo();return;}
     if(action==='toggle-check-in'){
       const revision=authRevision;
@@ -639,6 +685,7 @@
     if(f.id==="login-form"){e.preventDefault();await submitLogin(f);return;}
     if(!approved())return;
     if(f.id==="operator-code-form"){e.preventDefault();await submitCode(f);return;}
+    if(f.id==="beacon-config-form"){e.preventDefault();await submitBeaconConfig(f);return;}
     if (!["booking-form", "post-form", "comment-form"].includes(f.id)) return;
     e.preventDefault();
     if(busy) return;
@@ -735,12 +782,14 @@
     row.querySelector('strong').textContent=checkedIn?'동방에 있어요':'동방에 도착했나요?';
     const button=row.querySelector('button');button.textContent=checkedIn?'퇴실하기':'입실하기';button.className=checkedIn?'secondary-button':'primary-button';
   }
-  SaiPresence.subscribe(value=>{reading=value;if(value.snapshot){state.settings.occupancy=value.snapshot.count;state.settings.capacity=value.snapshot.referenceCapacity;if(typeof value.snapshot.checkedIn==='boolean'&&checkedIn!==value.snapshot.checkedIn){checkedIn=value.snapshot.checkedIn;updateCheckInRow();}}if(approved())SaiMotion.update(value);});
+  SaiPresence.subscribe(value=>{reading=value;if(value.snapshot){const note=document.querySelector('#beacon-last');if(note)note.textContent=beaconNoteText(value.snapshot);state.settings.occupancy=value.snapshot.count;state.settings.capacity=value.snapshot.referenceCapacity;if(typeof value.snapshot.checkedIn==='boolean'&&checkedIn!==value.snapshot.checkedIn){checkedIn=value.snapshot.checkedIn;updateCheckInRow();}}if(approved())SaiMotion.update(value);});
+  // Re-draw only screens without text inputs when detection status changes, so typing is never wiped.
+  SaiBeacon.subscribe(()=>{if(authenticated&&approved()&&['#beacon','#settings'].includes(location.hash)&&!busy)render();});
   window.addEventListener('sai:session-expired',()=>clearSession(authenticated));
   window.addEventListener('sai:permissions-changed',()=>{clearSession(false);boot();});
   async function boot(){
     const version=++authRevision,started=performance.now();bootError='';booting=true;authenticated=false;SaiPresence.stop();state.bookings=[];state.posts=[];announceAuth();render();
-    try{const data=await SaiBackend.bootstrap();if(version!==authRevision)return;state.bookings=data.bookings;state.posts=data.posts;state.settings={...state.settings,...data.preferences};ball=data.ball;checkedIn=data.checkedIn===true;sessionExpired=false;authenticated=true;if(approved())SaiPresence.start(state.settings);else{state.bookings=[];state.posts=[];}}
+    try{const data=await SaiBackend.bootstrap();if(version!==authRevision)return;state.bookings=data.bookings;state.posts=data.posts;state.settings={...state.settings,...data.preferences};ball=data.ball;checkedIn=data.checkedIn===true;sessionExpired=false;authenticated=true;if(approved()){SaiPresence.start(state.settings);SaiBeacon.restore().catch(()=>{});}else{state.bookings=[];state.posts=[];}}
     catch(e){if(version!==authRevision)return;bootError=e.status===401?'':e.message;}
     if(firstBoot){firstBoot=false;await new Promise(resolve=>setTimeout(resolve,Math.max(0,500-(performance.now()-started))));}
     if(version!==authRevision)return;booting=false;announceAuth();render();

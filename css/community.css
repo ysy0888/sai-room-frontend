@@ -11,3 +11,16 @@
 .application-person h3{display:flex;align-items:center;flex-wrap:wrap;gap:8px;overflow-wrap:anywhere}
 .application-role{font-size:10px;font-weight:500;line-height:1.6;padding:2px 7px;border-radius:4px;color:var(--muted);background:var(--soft);white-space:nowrap}
 .application-role.is-operator{color:var(--accent);border:1px solid var(--border)}
+
+/* Room beacon screens */
+.beacon-view{display:grid;gap:14px}
+.beacon-status{border:1px solid var(--line,#dfe4ef);border-radius:16px;padding:14px 16px;background:var(--surface,#fff)}
+.beacon-status strong{display:block;font-size:1.05rem}
+.beacon-status p{margin:4px 0 0}
+.beacon-status[data-code="inside"]{border-color:#3f8f6b}
+.beacon-status[data-code="server-error"],.beacon-status[data-code="bluetooth-off"],.beacon-status[data-code="permission-denied"]{border-color:#c0617a}
+.beacon-note{margin:10px 2px 0}
+.beacon-check{display:flex;align-items:center;gap:10px;min-height:44px}
+.beacon-check input{width:22px;height:22px}
+.beacon-sim-modes{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
+.beacon-dev{border:1px dashed #b7791f;border-radius:16px;padding:12px}
